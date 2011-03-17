@@ -1,0 +1,417 @@
+#define TRAIT_PHOTOSENSITIVE
+	[trait]
+		id=photosensitive
+		availability=none
+		name="photosensitive"
+		description=_ "Brent hates light!"
+	[/trait]
+#enddef
+
+#define PHOTOSENSITIVE_EVENT
+[event]
+	name=side turn
+	first_time_only=no
+	[store_unit]
+		variable=light_burns
+		[filter]
+			[filter_wml]
+				[trait]
+					id=photosensitive
+				[/trait]
+			[/filter_wml]
+			side=$side_number
+			[filter_location]
+				time_of_day=lawful
+				[not]
+					terrain=C*,K*,Uu,*^V*
+				[/not]
+			[/filter_location]
+		[/filter]
+		kill=no
+	[/store_unit]
+	{FOREACH light_burns i}
+		{VARIABLE light_burns[$i].resting no}
+		[if]
+			[variable]
+				name=light_burns[$i].hitpoints
+				greater_than=8
+			[/variable]
+			[then]
+				{VARIABLE_OP light_burns[$i].hitpoints add -8}
+			[/then]
+			[else]
+				{VARIABLE light_burns[$i].hitpoints 1}
+			[/else]
+		[/if]
+		[unstore_unit]
+			variable=light_burns[$i]
+			find_vacant=no
+			text=_ "8"
+			{COLOR_HARM}
+		[/unstore_unit]
+		[sound]
+			name=torch-miss.ogg
+		[/sound]
+	{NEXT i}
+	{CLEAR_VARIABLE light_burns}
+[/event]
+#enddef
+
+
+#define __ABILITY_TSTRING_PROTECTION
+    name= _ "protection"
+    description= _ "Protection:
+Adjacent units of lower level from this side receive a +20% bonus to all resistances (up to a maximum of 50%)."
+#enddef
+
+#define ABILITY_PROTECTION_LEVEL_2
+    [resistance]
+        id=protection
+        add=20
+        max_value=50
+        apply_to=blade,pierce,impact,fire,cold,arcane
+        {__ABILITY_TSTRING_PROTECTION}
+        affect_self=no
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=0
+                [or]
+                    level=1
+                [/or]
+            [/filter]
+        [/affect_adjacent]
+    [/resistance]
+#enddef
+
+#define ABILITY_PROTECTION_LEVEL_3
+    [resistance]
+        id=protection
+        add=20
+        max_value=50
+        apply_to=blade,pierce,impact,fire,cold,arcane
+        {__ABILITY_TSTRING_PROTECTION}
+        affect_self=no
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=0
+                [or]
+                    level=1
+                [/or]
+                [or]
+                    level=2
+                [/or]
+            [/filter]
+        [/affect_adjacent]
+    [/resistance]
+#enddef
+
+#define ABILITY_PROTECTION_LEVEL_4
+    [resistance]
+        id=protection
+        add=20
+        max_value=50
+        apply_to=blade,pierce,impact,fire,cold,arcane
+        {__ABILITY_TSTRING_PROTECTION}
+        affect_self=no
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=0
+                [or]
+                    level=1
+                [/or]
+                [or]
+                    level=2
+                [/or]
+                [or]
+                    level=3
+                [/or]
+            [/filter]
+        [/affect_adjacent]
+    [/resistance]
+#enddef
+
+#define ABILITY_OBSCURE
+    # Canned definition of the Obscures ability to be included in an
+    # [abilities] clause.
+    [illuminates]
+        id=obscure
+        value=-25
+        max_value=-25
+        cumulative=no
+        name= _ "obscures"
+        description= _ "Obscures:
+This unit darkens the surrounding area, making chaotic units fight better, and lawful units fight worse.
+
+Any units adjacent to this unit will fight as if it were dusk when it is day, and as if it were night when it is dusk."
+        affect_self=yes
+    [/illuminates]
+#enddef
+
+#define __ABILITY_TSTRING_TERROR
+    name= _ "terror"
+    description= _ "Terror:
+This unit can frighten enemy units that are next to it, making them fight worse.
+
+Adjacent enemy units of lower level will do less damage in battle. When an enemy unit of the same or lower level is adjacent and engages in combat, its attacks do 15% less damage times the difference in their levels + 15%."
+#enddef
+
+#define ABILITY_TERROR_LEVEL_1
+    [leadership]
+        id=terror
+        value=-30
+        cumulative=no
+        {__ABILITY_TSTRING_TERROR}
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=0
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+    [leadership]
+        id=terror
+        value=-15
+        cumulative=no
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=1
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+#enddef
+
+#define ABILITY_TERROR_LEVEL_2
+    [leadership]
+        id=terror
+        value=-45
+        cumulative=no
+        {__ABILITY_TSTRING_TERROR}
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=0
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+    [leadership]
+        id=terror
+        value=-30
+        cumulative=no
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=1
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+    [leadership]
+        id=terror
+        value=-15
+        cumulative=no
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=2
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+#enddef
+
+#define ABILITY_TERROR_LEVEL_3
+    [leadership]
+        id=terror
+        value=-60
+        cumulative=no
+        {__ABILITY_TSTRING_TERROR}
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=0
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+    [leadership]
+        id=terror
+        value=-45
+        cumulative=no
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=1
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+    [leadership]
+        id=terror
+        value=-30
+        cumulative=no
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=2
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+    [leadership]
+        id=terror
+        value=-15
+        cumulative=no
+        affect_self=no
+        affect_allies=no
+        affect_enemies=yes
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+            [filter]
+                level=3
+            [/filter]
+        [/affect_adjacent]
+    [/leadership]
+#enddef
+
+#define ABILITY_SYLVAN_ESSENCE
+    [heals]
+        value=8
+        id=sylvan_essence_healing
+        name= _ "sylvan essence"
+        description= _ "Sylvan Essence:
+This unit can heal and cure friendly units on adjacent hexes every turn, to a base maximum of 8 HP. In vegetated terrains, it will conceal itself from its enemies. It can also regenerate (but not unpoison) 3 HP per-turn, but only in vegetated terrains."+{__TSTRING_NOTES}+{SPECIAL_NOTES_VEGETATED_TERRAINS}
+        affect_allies=yes
+        affect_self=no
+        poison=cured
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+        [/affect_adjacent]
+    [/heals]
+    [hides]
+        id=sylvan_essence_conceal
+        affect_self=yes
+        [filter_self]
+            [filter_location]
+                terrain={VEGETATED_TERRAINS}
+            [/filter_location]
+        [/filter_self]
+    [/hides]
+    [regenerate]
+        value=3
+        id=sylvan_essence_selfheal
+        affect_self=yes
+        [filter_self]
+            [filter_location]
+                terrain={VEGETATED_TERRAINS}
+            [/filter_location]
+        [/filter_self]
+    [/regenerate]
+#enddef
+
+#define ABILITY_SYLVAN_ESSENCE_ILLUMINATE
+    [illuminates]
+        id=sylvan_essence_illum
+        value=25
+        max_value=25
+        cumulative=no
+        name= _ "sylvan essence"
+        description= _ "Sylvan Essence:
+This unit illuminates the surrounding area, making lawful units fight better, and chaotic units fight worse. Any units adjacent to this unit will fight as if it were dusk when it is night, and as if it were day when it is dusk.
+
+The unit also can heal and cure friendly units on adjacent hexes every turn, to a base maximum of 8 HP. In vegetated terrains, it will conceal itself from its enemies. It can also regenerate (but not unpoison) 4 HP per-turn, but only in vegetated terrains."+{__TSTRING_NOTES}+{SPECIAL_NOTES_VEGETATED_TERRAINS}
+        affect_self=yes
+    [/illuminates]
+    [heals]
+        value=8
+        id=sylvan_essence_healing
+        affect_allies=yes
+        affect_self=no
+        poison=cured
+        [affect_adjacent]
+            adjacent=n,ne,se,s,sw,nw
+        [/affect_adjacent]
+    [/heals]
+    [hides]
+        id=sylvan_essence_conceal
+        affect_self=yes
+        [filter_self]
+            [filter_location]
+                terrain={VEGETATED_TERRAINS}
+            [/filter_location]
+        [/filter_self]
+    [/hides]
+    [regenerate]
+        value=4
+        id=sylvan_essence_selfheal
+        affect_self=yes
+        [filter_self]
+            [filter_location]
+                terrain={VEGETATED_TERRAINS}
+            [/filter_location]
+        [/filter_self]
+    [/regenerate]
+#enddef
+
+## From Under the Burning Sun
+#define KALEH_STUN VARIATION
+    {KALEH_ADVANCEMENT 4 10 (
+        id=stun
+        description= _ "gain a stunning attack that disrupts enemy ZOC"
+        image=attacks/scimitar.png
+        require_amla="sword"
+        [effect]
+            apply_to=new_attack
+            name=sword_rush
+            description= _ "sword"
+            type=blade
+            icon=attacks/sword-elven.png
+            damage=5
+            number=4
+            range=melee
+            defense_weight=0
+            [specials]
+                [chance_to_hit]
+                    id=stun
+                    name= _ "stun"
+                    description= _ "Stun:
+This attack puts enormous pressure on the enemy, disrupting his ZOC if a hit is landed. The attacker is exposing himself to attack and will be slowed as a result of the effort. Not active on defense."
+                    name_inactive= _ "stun"
+                    description_inactive= _ "Stun:
+This attack puts enormous pressure on the enemy, disrupting his ZOC if a hit is landed. The attacker is exposing himself to attack and will be slowed as a result of the effort. Not active on defense."
+                    apply_to=opponent
+                    value=60
+                    cumulative=yes
+                [/chance_to_hit]
+            [/specials]
+        [/effect]
+        [effect]
+            apply_to=attack
+            name=sword_rush
+            times=per level
+            increase_damage=1
+        [/effect]
+    ) {VARIATION}}
+#enddef

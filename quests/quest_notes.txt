@@ -1,0 +1,19 @@
+##### NECESSARY SEGMENTS (General Guidelines) #####
+##### LN={LINE}{NUM} #####
+# LN_NAME
+# LN_INIT (Should trigger to initialize a quest on a map)
+# LN_DESC (Should trigger every time the quest giver tells about the quest.)
+# LN_FAIL
+# LN_SUCCEED
+
+##### IDEAS #####
+# Reach a signpost on the far side of the map within N turns
+# Survive N turns against numerous and powerful enemies
+# Rescue a prisoner or prisoners
+# Retrieve an artifact you will need later in the campaign
+# Seize an artifact from determined defenders
+# Kill a named enemy concealed at a randomized location
+# Kill an exceptionally powerful boss monster at a known location
+# Make contact with allies on the other side of an enemy force
+# Prevent the death of a vulnerable ally
+# Break a siege on a city
