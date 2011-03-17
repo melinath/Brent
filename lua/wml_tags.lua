@@ -160,7 +160,7 @@ wesnoth.register_wml_action("set_day",set_day)
 --     [filter]
 --         name=Scott
 --     [/filter]
--- [/pronoun]
+-- [/pronouns]
 local function pronouns(args)
     local args=args.__parsed
     local gender = args.gender
