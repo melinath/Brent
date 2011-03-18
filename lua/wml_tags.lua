@@ -1,7 +1,23 @@
 local helper=wesnoth.require "lua/helper.lua"
 local wlp_utils=wesnoth.require "~add-ons/Wesnoth_Lua_Pack/wlp_utils.lua"
-local brent_utils=wesnoth.require "~add-ons/Brent/utils/brent_utils.lua"
+local brent_utils=wesnoth.require "~add-ons/Brent/lua/utils.lua"
 _=wesnoth.textdomain "wesnoth-Brent"
+
+-- QUEST TAGS --
+
+--! [quest_center]
+--  declares a quest center at a particular location. Subtags include
+--  the quests that the center manages and a filter tag indicating which units
+--  activate the center (a standard unit filter).
+local function quest_center(args)
+    local filter = helper.get_child(args, "filter")
+    if (filter == nil) then error("~wml:[quest_center] expects a [filter] child", 0) end
+    filter = filter.__parsed
+    x, y = filter.x, filter.y
+    wesnoth.fire("event", {name="moveto", first_time_only="no", {"filter", filter}, {"message", {speaker="narrator", message=string.format("You have stepped on a quest center at %d, %d", x, y)}}})
+end
+wesnoth.register_wml_action("quest_center", quest_center)
+
 
 --! [quest_objectives]
 -- fires a message containing the objectives for all active quests.
@@ -11,11 +27,11 @@ local function quest_objectives_display()
     if line_list~=nil then
         for line in string.gmatch(line_list,"([A-Z]+),") do
             local x = wesnoth.get_variable("quests."..line..".length")
-    	    for i=0,x-1 do
-    	        if wesnoth.get_variable("quests."..line..'['..i..'].active')==1 then
-		    quest_objectives = quest_objectives..wesnoth.get_variable("quests."..line..'['..i..'].objectives')
-	        end
-	    end
+                for i=0,x-1 do
+                    if wesnoth.get_variable("quests."..line..'['..i..'].active')==1 then
+                    quest_objectives = quest_objectives..wesnoth.get_variable("quests."..line..'['..i..'].objectives')
+                end
+            end
         end
     end
     if quest_objectives=="" then quest_objectives=_"You aren't on any quests" end
@@ -35,13 +51,13 @@ local function quest_dialog_command(args)
     if(quest_vars~=nil) then
         wlp_utils.remove_child(args,"quest_vars")
         for k,v in pairs(quest_vars) do
-	    if(k=="objectives") then wesnoth.fire("narrate",{image="wesnoth-icon.png",message="<span foreground='green'>You have new Quest Objectives.</span>\
+            if(k=="objectives") then wesnoth.fire("narrate",{image="wesnoth-icon.png",message="<span foreground='green'>You have new Quest Objectives.</span>\
 They are accessible through the right-click menu."}) end
-	    wesnoth.set_variable("quests."..args.line..'['..args.num..'].'..k,v)
-	end
+        wesnoth.set_variable("quests."..args.line..'['..args.num..'].'..k,v)
+        end
     end
     for i=1,#args do
-	wesnoth.fire(args[i][1],args[i][2])
+        wesnoth.fire(args[i][1],args[i][2])
     end
 end
 wesnoth.register_wml_action("quest_dialog_command",quest_dialog_command)
@@ -54,32 +70,38 @@ local function quest_dialog(args)
     local new_args = {id=args.id,message=msg}
     local command = helper.get_child(args,"option")
     while command~=nil do
-	command.line=args.line
-	command.num=args.num
-	command.id=args.id
-	local show_if=helper.get_child(command,"show_if")
-	if show_if~=nil then
-	    wlp_utils.remove_child(command,"show_if")
-	    table.insert(new_args,
-	        {"option",
+        command.line=args.line
+        command.num=args.num
+        command.id=args.id
+        local show_if=helper.get_child(command,"show_if")
+        if show_if~=nil then
+            wlp_utils.remove_child(command,"show_if")
+            table.insert(new_args,
+                {"option",
                     {message=command.message,
-		        {"show_if",show_if},
-		        {"command",{{"quest_dialog_command",command}}}
-		    }
-		})
-	else
-	    table.insert(new_args,{"option",
-                    {message=command.message,
-	                {"command",{{"quest_dialog_command",command}}}
-		    }
-	        })
-	end
-	command=wlp_utils.remove_child(args,"option")
-	command=helper.get_child(args,"option")
+                        {"show_if",show_if},
+                        {"command",{{"quest_dialog_command",command}}}
+                    }
+                })
+        else
+            table.insert(new_args,{"option",
+                        {message=command.message,
+                        {"command",{{"quest_dialog_command",command}}}
+                    }
+                })
+        end
+        command=wlp_utils.remove_child(args,"option")
+        command=helper.get_child(args,"option")
     end
     wesnoth.fire("message",new_args)
 end
 wesnoth.register_wml_action("quest_dialog",quest_dialog)
+
+
+-- END QUEST TAGS --
+
+
+-- CHARACTERISTIC TAGS --
 
 --! [faction_shift]
 
@@ -90,7 +112,7 @@ wesnoth.register_wml_action("quest_dialog",quest_dialog)
 local function faction_shift(args)
     local args = args.__parsed
     for f,v in pairs(args) do
-	o=wesnoth.get_variable('factions.'..f) or 0
+        o=wesnoth.get_variable('factions.'..f) or 0
         wesnoth.set_variable("factions."..f,o+v)
     end
     wesnoth.set_variable("unit_store")
@@ -143,6 +165,11 @@ local function alignment_shift(args)
 end
 wesnoth.register_wml_action("alignment_shift",alignment_shift)
 
+-- END CHARACTERISTIC TAGS --
+
+
+-- SCENARIO TAGS --
+
 --! Preps the day length for a scenario. Takes day=, which is the number of turns in
 -- the day.
 local function set_day(args)
@@ -151,6 +178,45 @@ local function set_day(args)
     wesnoth.fire("modify_turns",{current=math.ceil(wesnoth.get_variable("global_TOD")/turn_length)})
 end
 wesnoth.register_wml_action("set_day",set_day)
+
+--! [wandering_monsters]
+-- sets certain sides to have their units move randomly within their maximum
+-- movement.
+
+local function wandering_monsters()
+    wesnoth.fire("store_unit", {
+    [1] = { "filter", {side=wesnoth.get_variable("side_number")} },
+    variable = "unit_store",
+        kill = true
+    })
+    for i = 0, wesnoth.get_variable("unit_store.length") - 1 do
+    local u = wesnoth.get_variable("unit_store[" .. i .. "]")
+    wesnoth.fire("store_locations",{
+        {"and",{x=u.x,y=u.y,radius=u.max_moves}},
+        {"not",{x=u.x,y=u.y}},
+        variable="possible_gotos"
+        })
+    local r=math.random(0,wesnoth.get_variable("possible_gotos.length")-1)
+    local goto=wesnoth.get_variable("possible_gotos["..r.."]")
+    
+    wesnoth.set_variable("unit_store[" .. i .. "].goto_x",goto.x)
+    wesnoth.set_variable("unit_store[" .. i .. "].goto_y",goto.y)
+    wesnoth.fire("unstore_unit", {
+        variable = "unit_store[" .. i .. "]",
+        find_vacant = false
+        })
+    end
+    wesnoth.set_variable("unit_store")
+    wesnoth.set_variable("possible_gotos")
+end
+wesnoth.register_wml_action("wandering_monsters",wandering_monsters)
+
+
+-- END SCENARIO TAGS --
+
+
+-- UNIT TAGS --
+
 
 --! [pronouns], given a unit filter (takes first unit) or a gender, sets the
 -- prounoun variable accordingly.
@@ -161,6 +227,14 @@ wesnoth.register_wml_action("set_day",set_day)
 --         name=Scott
 --     [/filter]
 -- [/pronouns]
+--
+-- The pronoun variable is structured as follows:
+-- pronoun.nom :: The nominative pronoun
+-- pronoun.acc :: The accusative pronoun
+-- pronoun.pos :: The possessive pronoun
+-- pronoun.uc  :: A copy of pronoun with the first letter of each pronoun capitalized
+--
+-- TODO: This should allow a variable name to be chosen.
 local function pronouns(args)
     local args=args.__parsed
     local gender = args.gender
@@ -194,34 +268,4 @@ local function pronouns(args)
 end
 wesnoth.register_wml_action("pronouns",pronouns)
 
---! [wandering_monsters]
--- sets certain sides to have their units move randomly within their maximum
--- movement.
-
-local function wandering_monsters()
-    wesnoth.fire("store_unit", {
-    [1] = { "filter", {side=wesnoth.get_variable("side_number")} },
-    variable = "unit_store",
-        kill = true
-    })
-    for i = 0, wesnoth.get_variable("unit_store.length") - 1 do
-    local u = wesnoth.get_variable("unit_store[" .. i .. "]")
-    wesnoth.fire("store_locations",{
-        {"and",{x=u.x,y=u.y,radius=u.max_moves}},
-        {"not",{x=u.x,y=u.y}},
-        variable="possible_gotos"
-        })
-    local r=math.random(0,wesnoth.get_variable("possible_gotos.length")-1)
-    local goto=wesnoth.get_variable("possible_gotos["..r.."]")
-    
-    wesnoth.set_variable("unit_store[" .. i .. "].goto_x",goto.x)
-    wesnoth.set_variable("unit_store[" .. i .. "].goto_y",goto.y)
-    wesnoth.fire("unstore_unit", {
-        variable = "unit_store[" .. i .. "]",
-        find_vacant = false
-        })
-    end
-    wesnoth.set_variable("unit_store")
-    wesnoth.set_variable("possible_gotos")
-end
-wesnoth.register_wml_action("wandering_monsters",wandering_monsters)
+-- END UNIT TAGS --
