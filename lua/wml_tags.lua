@@ -1,22 +1,8 @@
-local helper=wesnoth.require "lua/helper.lua"
-local wlp_utils=wesnoth.require "~add-ons/Wesnoth_Lua_Pack/wlp_utils.lua"
-local brent_utils=wesnoth.require "~add-ons/Brent/lua/utils.lua"
-_=wesnoth.textdomain "wesnoth-Brent"
+local helper = wesnoth.require "lua/helper.lua"
+local wlp_utils = wesnoth.require "~add-ons/Wesnoth_Lua_Pack/wlp_utils.lua"
+_ = wesnoth.textdomain "wesnoth-Brent"
 
 -- QUEST TAGS --
-
---! [quest_center]
---  declares a quest center at a particular location. Subtags include
---  the quests that the center manages and a filter tag indicating which units
---  activate the center (a standard unit filter).
-local function quest_center(args)
-    local filter = helper.get_child(args, "filter")
-    if (filter == nil) then error("~wml:[quest_center] expects a [filter] child", 0) end
-    filter = filter.__parsed
-    x, y = filter.x, filter.y
-    wesnoth.fire("event", {name="moveto", first_time_only="no", {"filter", filter}, {"message", {speaker="narrator", message=string.format("You have stepped on a quest center at %d, %d", x, y)}}})
-end
-wesnoth.register_wml_action("quest_center", quest_center)
 
 
 --! [quest_objectives]
