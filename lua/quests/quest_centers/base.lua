@@ -1,11 +1,13 @@
 local helper = wesnoth.require "lua/helper.lua"
 local game_events = wesnoth.game_events
+local items = wesnoth.require "lua/wml/items.lua"
 
 
 --! Quest center class
 local quest_center = {
 	new = function(self, id)
 			if type(id) == "string" and id ~= "base" then
+				if id:find("..", 1, true) then error("~wml:[quest_center] ids cannot contain the string `..`") end
 				filename = string.format("~add-ons/Brent/lua/quests/quest_centers/%s.lua", id)
 				success, o = pcall(wesnoth.require, filename)
 				if success ~= true then o = {} end
@@ -24,6 +26,11 @@ local quest_center = {
 			if (cfg.id == nil) then error("~wml:[quest_center] must declare an id", 0) end
 			self.filter = helper.literal(filter)
 			self.id = cfg.id
+			self.image = cfg.image
+			
+			x = filter.x
+			y = filter.y
+			if self.image and x and y then items.place_image(x, y, self.image) end
 			
 			local old_on_event = game_events.on_event
 			function game_events.on_event(name)
@@ -52,5 +59,6 @@ local quest_center = {
 	cfg = nil,
 	filter = nil,
 	id = nil,
+	image = nil,
 }
 return quest_center

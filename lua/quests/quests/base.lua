@@ -2,6 +2,7 @@
 local quest = {
 	new = function(self, id)
 			if type(id) == "string" and id ~= "base" then
+				if id:find("..", 1, true) then error("~wml:[quest] ids cannot contain the string `..`") end
 				filename = string.format("~add-ons/Brent/lua/quests/quests/%s.lua", id)
 				success, o = pcall(wesnoth.require, filename)
 				if success ~= true then o = {} end
