@@ -38,4 +38,20 @@ quest_utils.dialog = function(cfg, options)
 end
 
 
+quest_utils.display_objectives = function()
+	-- it should be possible to have a "display all" option.
+	if next(quests) == nil then
+		quest_utils.message("There are no active quests")
+	end
+	local o = {}
+	local q = {}
+	for k,v in pairs(quests) do
+		table.insert(o, v.name)
+		table.insert(q, v)
+	end
+	choice = helper.get_user_choice({message=_ "Active quests:"}, o)
+	q[choice]:display_objectives()
+end
+
+
 return quest_utils

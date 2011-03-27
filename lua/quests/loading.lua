@@ -30,6 +30,12 @@ function game_events.on_load(cfg)
 			table.remove(cfg, i)
 		end
 	end
+	menu_item = {
+		id="Quest Objectives",
+		description = _ "Display Quest Objectives",
+		{"command", {{"lua", {code="quest_utils.display_objectives()"}}}}
+	}
+	wesnoth.fire("set_menu_item", menu_item)
 	old_on_load(cfg)
 end
 
