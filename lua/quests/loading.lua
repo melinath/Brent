@@ -1,6 +1,7 @@
 local game_events = wesnoth.game_events
 local quest = wesnoth.require "~/add-ons/Brent/lua/quests/quests/base.lua"
 local quest_center = wesnoth.require "~/add-ons/Brent/lua/quests/quest_centers/base.lua"
+local _ = wesnoth.textdomain "wesnoth-Brent"
 
 
 -- Declare global variables "quests" and "quest_centers" which will be populated
@@ -41,12 +42,12 @@ end
 
 local old_on_save = game_events.on_save
 function game_events.on_save(cfg)
-	local custom_cfg = old_on_save()
+	local cfg = old_on_save()
 	for i,v in pairs(quest_centers) do
-		table.insert(custom_cfg, {"quest_center", v:dump()})
+		table.insert(cfg, {"quest_center", v:dump()})
 	end
 	for i,v in pairs(quests) do
-		table.insert(custom_cfg, {"quest", v:dump()})
+		table.insert(cfg, {"quest", v:dump()})
 	end
-	return custom_cfg
+	return cfg
 end
