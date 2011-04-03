@@ -1,0 +1,5 @@
+Make sure that Brent is downloaded to <userdata>/add-ons/Brent in order to have it work correctly.
+
+Prerequesites:
+	- Wesnoth 1.9.5 (may also work on lower versions of 1.9.)
+	- Wesnoth Lua Pack (available from the Wesnoth add-ons server.)
