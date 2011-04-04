@@ -11,16 +11,64 @@ map = {
 	config = function(self, cfg)
 		self.turns_per_day = cfg.turns_per_day or self.turns_per_day
 		self.id = cfg.id
+		self.schedule = cfg.schedule
+		self:set_schedule()
 	end,
 	dump = function(self)
 		return {
 			turns_per_day = self.turns_per_day,
-			id = self.id
+			id = self.id,
+			schedule = self.schedule
 		}
 	end,
 	get_timedelta = function(self)
 		-- timedelta is the local time change per turn
 		return 24/self.turns_per_day
+	end,
+	
+	set_schedule = function(self)
+		local schedule_string = self.schedule
+		local s = {}
+		if schedule_string == nil then
+			s = self:make_schedule()
+		else
+			for value in string.gmatch(schedule_string, "[^%s,][^,]*") do
+				table.insert(s, value)
+			end
+		end
+		local schedule = {}
+		for i=1,#s do
+			local new = map_utils.schedules[s[i]]
+			if new ~= nil then
+				if new.illuminated ~= nil then
+					table.insert(schedule, {"illuminated_time", new.illuminated})
+					table.remove(new, "illuminated")
+				end
+				table.insert(schedule, {"time", new})
+			end
+		end
+		wesnoth.fire("replace_schedule", schedule)
+	end,
+	
+	make_schedule = function(self)
+		local t = self.turns_per_day
+		local s = {}
+		for i=1,t do
+			if i < t/6 then
+				table.insert(s, "dawn")
+			elseif i < 2*t/6 then
+				table.insert(s, "morning")
+			elseif i < 3*t/6 then
+				table.insert(s, "afternoon")
+			elseif i < 4*t/6 then
+				table.insert(s, "dusk")
+			elseif i < 5*t/6 then
+				table.insert(s, "first_watch")
+			else
+				table.insert(s, "second_watch")
+			end
+		end
+		return s
 	end
 }
 
