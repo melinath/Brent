@@ -42,15 +42,18 @@ local interaction = {
 		if (filter == nil) then error("~wml:[interaction] expects a [filter] child", 0) end
 		local command = helper.get_child(cfg, "command")
 		if (command == nil) then error("~wml:[interaction] expects a [command] child", 0) end
-		--if (cfg.id == nil) then error("~wml:[interaction] must declare an id", 0) end
 		self.filter = helper.literal(filter)
 		self.command = helper.literal(command)
+		
+		local setup = helper.get_child(cfg, "setup")
+		if setup ~= nil then
+			setup.name = "prestart"
+			wesnoth.fire("event", setup)
+		end
+		
 		self.x = cfg.x
 		self.y = cfg.y
 		self.image = cfg.image
-		if self.image and self.x and self.y then
-			items.place_image(self.x, self.y, self.image)
-		end
 		
 		local old_on_event = game_events.on_event
 		function game_events.on_event(name)
@@ -66,6 +69,8 @@ local interaction = {
 			if (wesnoth.match_unit(u, self.filter)) then
 				self:activate()
 			end
+		elseif name == "prestart" and self.image and self.x and self.y then
+			items.place_image(self.x, self.y, self.image)
 		end
 	end,
 	activate = function(self)
