@@ -154,7 +154,7 @@ local exit = {
 	setup = function(self, cfg)
 		self.cfg = cfg
 		local filter = helper.get_child(cfg, "filter")
-		if filter == nil then error("~wml:[exits] expects a [filter] child", 0) end
+		if filter == nil then error("~wml:[exit] expects a [filter] child", 0) end
 		self.filter = helper.literal(filter)
 		self.start_x = cfg.start_x
 		self.start_y = cfg.start_y
@@ -164,7 +164,9 @@ local exit = {
 		return self.cfg
 	end,
 	is_active = function(self)
-		return wesnoth.match_unit(self.filter)
+		local c = wesnoth.current.event_context
+		local u = wesnoth.get_unit(c.x1, c.y1)
+		return wesnoth.match_unit(u, self.filter)
 	end,
 	activate = function(self)
 		local cancel = wesnoth.fire_event("cancel_exit")
@@ -249,8 +251,8 @@ function game_events.on_event(name)
 		map_utils.store_shroud(map.id)
 	elseif name == "moveto" then
 		for i=1,#exits do
-			if exit:is_active() then
-				exit:activate()
+			if exits[i]:is_active() then
+				exits[i]:activate()
 			end
 		end
 	end

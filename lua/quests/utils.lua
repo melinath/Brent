@@ -42,6 +42,7 @@ quest_utils.display_objectives = function()
 	-- it should be possible to have a "display all" option.
 	if next(quests) == nil then
 		quest_utils.message("There are no active quests")
+		return
 	end
 	local o = {}
 	local q = {}

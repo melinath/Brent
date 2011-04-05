@@ -131,8 +131,8 @@ wesnoth.register_wml_action("quest", create_quest)
 local old_on_load = game_events.on_load
 function game_events.on_load(cfg)
 	local qs = helper.get_variable_array("quest")
-	for i=1,#quests do
-		local q = quest:new(quests[i])
+	for i=1,#qs do
+		local q = quest:new(qs[i])
 	end
 	menu_item = {
 		id="Quest Objectives",
