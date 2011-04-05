@@ -77,7 +77,7 @@ interactions = {}
 --! Interaction base class
 local interaction = {
 	new = function(self, cfg)
-			o = cfg or {}
+			local o = cfg or {}
 			setmetatable(o, self)
 			self.__index = self
 			table.insert(interactions, o)
@@ -140,19 +140,67 @@ local interaction = {
 	command = nil,
 }
 
+exits = {}
+
+--! Exit base class
+local exit = {
+	new = function(self, cfg)
+		local o = cfg or {}
+		setmetatable(o, self)
+		self.__index = self
+		table.insert(exits, o)
+		return o
+	end,
+	setup = function(self, cfg)
+		self.cfg = cfg
+		local filter = helper.get_child(cfg, "filter")
+		if filter == nil then error("~wml:[exits] expects a [filter] child", 0) end
+		self.filter = helper.literal(filter)
+		self.start_x = cfg.start_x
+		self.start_y = cfg.start_y
+		self.scenario = cfg.scenario
+	end,
+	dump = function(self)
+		return self.cfg
+	end,
+	is_active = function(self)
+		return wesnoth.match_unit(self.filter)
+	end,
+	activate = function(self)
+		local cancel = wesnoth.fire_event("cancel_exit")
+		if cancel then return end
+		wesnoth.fire_event("exit")
+		wesnoth.set_variable("start_x", self.start_x)
+		wesnoth.set_variable("start_y", self.start_y)
+		local e = {
+			name = "victory",
+			save = true,
+			carryover_report = false,
+			carryover_percentage = 100,
+			linger_mode = false,
+			bonus = false,
+			next_scenario = self.scenario
+		}
+		wesnoth.fire("endlevel", e)
+	end
+}
+
 
 local old_on_load = game_events.on_load
 function game_events.on_load(cfg)
 	for i=#cfg,1,-1 do
 		local v = cfg[i]
+		local v2 = v[2]
 		if v[1] == "map" then
-			local v2 = v[2]
 			map:config(v2)
 			table.remove(cfg, i)
 		elseif v[1] == "interaction" then
-			local v2 = v[2]
 			local interaction = interaction:new()
 			interaction:setup(v2)
+			table.remove(cfg, i)
+		elseif v[1] == "exit" then
+			local exit = exit:new()
+			exit:setup(v2)
 			table.remove(cfg, i)
 		end
 	end
@@ -166,6 +214,9 @@ function game_events.on_save()
 	table.insert(cfg, {"map", map:dump()})
 	for i=1,#interactions do
 		table.insert(cfg, {"interaction", interactions[i]:dump()})
+	end
+	for i=1, #exits do
+		table.insert(cfg, {"exit", exits[i]:dump()})
 	end
 	return cfg
 end
@@ -196,6 +247,12 @@ function game_events.on_event(name)
 		helper.set_variable_array("story_message", {})
 	elseif name == "victory" or name == "defeat" then
 		map_utils.store_shroud(map.id)
+	elseif name == "moveto" then
+		for i=1,#exits do
+			if exit:is_active() then
+				exit:activate()
+			end
+		end
 	end
 	if old_on_event ~= nil then old_on_event(name) end
 end
