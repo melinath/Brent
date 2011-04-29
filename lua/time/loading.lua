@@ -1,6 +1,8 @@
 local game_events = wesnoth.game_events
-local time_utils = wesnoth.require "~/add-ons/Brent/lua/time/utils.lua"
 local _ = wesnoth.textdomain "wesnoth-Brent"
+
+
+-- NOTE:: Time is represented in hours.
 
 
 function current_time_display()
@@ -12,7 +14,13 @@ local old_on_event = game_events.on_event
 function game_events.on_event(name)
 	if name == "new turn" then
 		local time = time_utils.get_time()
-		time_utils.set_time(time + map:get_timedelta())
+		local new_time
+		if time == nil then
+			new_time = 0
+		else
+			new_time = time + map:get_timedelta()
+		end
+		time_utils.set_time(new_time)
 	elseif name == "prestart" then
 		menu_item = {
 			id="calendar",
