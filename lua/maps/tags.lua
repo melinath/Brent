@@ -1,4 +1,4 @@
-local story_message(cfg)
+local function story_message(cfg)
 	if cfg.message then
 		local msgs = wesnoth.get_variable_array("story_message")
 		table.insert(msgs, cfg.message)

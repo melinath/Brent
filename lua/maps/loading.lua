@@ -141,6 +141,7 @@ local interaction = {
 }
 
 exits = {}
+exit_cancelers = {}
 
 --! Exit base class
 local exit = {
@@ -169,8 +170,6 @@ local exit = {
 		return wesnoth.match_unit(u, self.filter)
 	end,
 	activate = function(self)
-		local cancel = wesnoth.fire_event("cancel_exit")
-		if cancel then return end
 		wesnoth.fire_event("exit")
 		wesnoth.set_variable("start_x", self.start_x)
 		wesnoth.set_variable("start_y", self.start_y)
@@ -186,6 +185,62 @@ local exit = {
 		wesnoth.fire("endlevel", e)
 	end
 }
+
+--! Exit canceler base class
+local exit_canceler = {
+	new = function(self, cfg)
+		local o = cfg or {}
+		setmetatable(o, self)
+		self.__index = self
+		table.insert(exit_cancelers, o)
+		return o
+	end,
+	setup = function(self, cfg)
+		self.cfg = cfg
+		local filter = helper.get_child(cfg, "filter")
+		if filter == nil then error("~wml:[cancel_exit] expects a [filter] child", 0) end
+		self.filter = helper.literal(filter)
+		
+		local cancel_if = helper.get_child(cfg, "cancel_if")
+		if cancel_if ~= nil then
+			local lua = helper.get_child(cancel_if, "lua")
+			if lua ~= nil then
+				self.should_cancel = loadstring(lua.code)
+			end
+		end
+		self.cancel_if = helper.literal(cancel_if)
+		
+		self.command = helper.get_child(cfg, "command")
+	end,
+	should_cancel = function(self)
+		local c = wesnoth.current.event_context
+		local u = wesnoth.get_unit(c.x1, c.y1)
+		
+		if not wesnoth.match_unit(u, self.filter) then return false end
+		if self.cancel_if == nil then return true end
+		
+		local lua = helper.get_child(self.cancel_if, "lua")
+		if lua ~= nil then
+			return loadstring(lua.code)()
+		end
+		return wesnoth.eval_conditional(self.cancel_if)
+	end,
+	run_commands = function(self)
+		if self.command ~= nil then
+			for i=1,#self.command do
+				local v = self.command[i]
+				wesnoth.fire(v[1], v[2])
+			end
+		end
+	end,
+}
+
+
+local function cancel_exit(cfg)
+	local exit_canceler = exit_canceler:new()
+	exit_canceler:setup(cfg)
+end
+wesnoth.register_wml_action("cancel_exit", cancel_exit)
 
 
 local old_on_load = game_events.on_load
@@ -252,7 +307,15 @@ function game_events.on_event(name)
 	elseif name == "moveto" then
 		for i=1,#exits do
 			if exits[i]:is_active() then
-				exits[i]:activate()
+				local activate = true
+				for j=1, #exit_cancelers do
+					if exit_cancelers[j]:should_cancel() then
+						activate = false
+						exit_cancelers[j]:run_commands()
+						break
+					end
+				end
+				if activate then exits[i]:activate() end
 			end
 		end
 	end
