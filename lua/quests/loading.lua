@@ -60,6 +60,8 @@ local quest = {
 		
 		local bullet = "&#8226; "
 		
+		-- Each objective can have show_if and also a code="" to hold lua code...
+		-- The lua code should return a string which is the status of the quest.
 		for obj in helper.child_range(self.cfg, "objective") do
 			local show_if = helper.get_child(obj, "show_if")
 			if not show_if or wesnoth.eval_conditional(show_if) then
@@ -71,10 +73,19 @@ local quest = {
 					caption = caption .. "\n"
 				end
 				
+				local description = obj.description
+				if obj.code then
+					local code = loadstring(obj.code)
+					local r = code()
+					if r ~= nil then
+						description = description .. " (" .. r .. ")"
+					end
+				end
+				
 				if condition == "succeed" then
-					success_objectives = success_objectives .. caption .. color_prefix(0, 255, 0) .. bullet .. obj.description .. "</span>" .. "\n"
+					success_objectives = success_objectives .. caption .. color_prefix(0, 255, 0) .. bullet .. description .. "</span>" .. "\n"
 				elseif condition == "fail" then
-					fail_objectives = fail_objectives .. caption .. color_prefix(255, 0, 0) .. bullet .. obj.description .. "</span>" .. "\n"
+					fail_objectives = fail_objectives .. caption .. color_prefix(255, 0, 0) .. bullet .. description .. "</span>" .. "\n"
 				else
 					wesnoth.message "Unknown condition, ignoring."
 				end
