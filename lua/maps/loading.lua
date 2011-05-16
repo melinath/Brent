@@ -288,9 +288,9 @@ function game_events.on_event(name)
 		-- Set starting position.
 		local start_x = wesnoth.get_variable("start_x")
 		local start_y = wesnoth.get_variable("start_y")
-		local main_id = wesnoth.get_variable("main_id")
+		local main_id = wesnoth.get_variable("main.id")
 		if start_x ~= nil and start_y ~= nil and main_id ~= nil then
-			local unit = wesnoth.get_unit(main_id)
+			local unit = wesnoth.get_units{id=main_id}[1]
 			wesnoth.put_unit(start_x, start_y, unit)
 			wesnoth.scroll_to_tile(start_x, start_y)
 			wesnoth.set_variable("start_x", nil)
