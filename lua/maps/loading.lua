@@ -111,10 +111,10 @@ local interaction = {
 	end,
 	
 	on_event = function(self, name)
-		if (name == "moveto") then
+		if name == "moveto" then
 			local c = wesnoth.current.event_context
 			local u = wesnoth.get_unit(c.x1, c.y1)
-			if (wesnoth.match_unit(u, self.filter)) then
+			if u ~= nil and wesnoth.match_unit(u, self.filter) then
 				self:activate()
 			end
 		elseif name == "prestart" and self.image and self.x and self.y then
@@ -170,7 +170,8 @@ local exit = {
 		return wesnoth.match_unit(u, self.filter)
 	end,
 	activate = function(self)
-		wesnoth.fire_event("exit")
+		local c = wesnoth.current.event_context
+		wesnoth.fire_event("exit", c.x1, c.y1, c.x2, c.y2)
 		wesnoth.set_variable("start_x", self.start_x)
 		wesnoth.set_variable("start_y", self.start_y)
 		local e = {
@@ -281,41 +282,43 @@ end
 
 local old_on_event = game_events.on_event
 function game_events.on_event(name)
-	if name == "prestart" then
-		map_utils.mark_visited(map.id)
-		map_utils.mark_known(map.id)
-		map_utils.load_shroud(map.id)
-		-- Set starting position.
-		local start_x = wesnoth.get_variable("start_x")
-		local start_y = wesnoth.get_variable("start_y")
-		local main_id = wesnoth.get_variable("main.id")
-		if start_x ~= nil and start_y ~= nil and main_id ~= nil then
-			local unit = wesnoth.get_units{id=main_id}[1]
-			wesnoth.put_unit(start_x, start_y, unit)
-			wesnoth.scroll_to_tile(start_x, start_y)
-			wesnoth.set_variable("start_x", nil)
-			wesnoth.set_variable("start_y", nil)
-		end
-		-- Storyboard messages
-		local msgs = helper.get_variable_array("story_message")
-		for i=1,#msgs do
-			wesnoth.fire("narrate", msgs[i])
-		end
-		wesnoth.set_variable "story_message"
-	elseif name == "victory" or name == "defeat" then
-		map_utils.store_shroud(map.id)
-	elseif name == "moveto" then
-		for i=1,#exits do
-			if exits[i]:is_active() then
-				local activate = true
-				for j=1, #exit_cancelers do
-					if exit_cancelers[j]:should_cancel() then
-						activate = false
-						exit_cancelers[j]:run_commands()
-						break
+	if map.id ~= nil then
+		if name == "prestart" then
+			map_utils.mark_visited(map.id)
+			map_utils.mark_known(map.id)
+			map_utils.load_shroud(map.id)
+			-- Set starting position.
+			local start_x = wesnoth.get_variable("start_x")
+			local start_y = wesnoth.get_variable("start_y")
+			local main_id = wesnoth.get_variable("main.id")
+			if start_x ~= nil and start_y ~= nil and main_id ~= nil then
+				local unit = wesnoth.get_units{id=main_id}[1]
+				wesnoth.put_unit(start_x, start_y, unit)
+				wesnoth.scroll_to_tile(start_x, start_y)
+				wesnoth.set_variable("start_x", nil)
+				wesnoth.set_variable("start_y", nil)
+			end
+			-- Storyboard messages
+			local msgs = helper.get_variable_array("story_message")
+			for i=1,#msgs do
+				wesnoth.fire("narrate", msgs[i])
+			end
+			wesnoth.set_variable "story_message"
+		elseif name == "victory" or name == "defeat" then
+			map_utils.store_shroud(map.id)
+		elseif name == "moveto" then
+			for i=1,#exits do
+				if exits[i]:is_active() then
+					local activate = true
+					for j=1, #exit_cancelers do
+						if exit_cancelers[j]:should_cancel() then
+							activate = false
+							exit_cancelers[j]:run_commands()
+							break
+						end
 					end
+					if activate then exits[i]:activate() end
 				end
-				if activate then exits[i]:activate() end
 			end
 		end
 	end
