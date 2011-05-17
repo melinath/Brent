@@ -299,9 +299,9 @@ function game_events.on_event(name)
 		-- Storyboard messages
 		local msgs = helper.get_variable_array("story_message")
 		for i=1,#msgs do
-			wesnoth.fire("narrate", {message=msgs[i].message})
+			wesnoth.fire("narrate", msgs[i])
 		end
-		helper.set_variable_array("story_message", {})
+		wesnoth.set_variable "story_message"
 	elseif name == "victory" or name == "defeat" then
 		map_utils.store_shroud(map.id)
 	elseif name == "moveto" then

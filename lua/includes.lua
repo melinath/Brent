@@ -10,6 +10,7 @@ wesnoth.dofile "~add-ons/Brent/lua/quests/loading.lua"
 --! Maps
 --  This needs to come after quests so that the map is defined before quests are parsed.
 wesnoth.dofile "~add-ons/Brent/lua/maps/loading.lua"
+wesnoth.dofile "~add-ons/Brent/lua/maps/tags.lua"
 
 --! Time
 wesnoth.dofile "~add-ons/Brent/lua/time/loading.lua"
