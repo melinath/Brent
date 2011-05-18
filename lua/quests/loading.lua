@@ -44,6 +44,14 @@ local quest = {
 	end,
 	
 	mark_complete = function(self)
+		reward = helper.get_child(self.cfg, "reward")
+		if reward ~= nil then
+			if reward.experience then
+				local main_id = wesnoth.get_variable('main.id')
+				local u = wesnoth.get_units{id=main_id}[1]
+				u.experience = u.experience + reward.experience
+			end
+		end
 		self.cfg = {
 			id = self.id,
 			name = self.name,
