@@ -2,6 +2,7 @@ local helper = wesnoth.require "lua/helper.lua"
 
 
 local function story_message(cfg)
+	local cfg = cfg.__parsed
 	if cfg.message then
 		local msgs = helper.get_variable_array("story_message")
 		table.insert(msgs, cfg)

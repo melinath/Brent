@@ -23,6 +23,26 @@ quest_utils.has_advance = function(unit, advance_id)
 	return false
 end
 
+quest_utils.get_pronouns = function(unit)
+	gender = unit.__cfg.gender
+	if gender == "male" then
+		return {
+			nom='he',acc='him',pos='his',
+			{'uc', {nom='He',acc='Him',pos='His'}}
+		}
+	elseif gender == "female" then
+		return {
+			nom='she',acc='her',pos='hers',
+			{'uc', {nom='She',acc='Her',pos='Hers'}}
+		}
+	else
+		return {
+			nom='ze',acc='hir',pos='hirs',
+			{'uc', {nom='Ze',acc='Hir',pos='Hirs'}}
+		}
+	end
+end
+
 
 quest_utils.dialog = function(cfg, options)
 	-- cfg is an (img, msg, speaker) table; options is a table of tables
@@ -40,15 +60,17 @@ end
 
 quest_utils.display_objectives = function()
 	-- it should be possible to have a "display all" option.
-	if next(quests) == nil then
-		quest_utils.message("There are no active quests")
-		return
-	end
 	local o = {}
 	local q = {}
 	for k,v in ipairs(quests) do
-		table.insert(o, v.name)
-		table.insert(q, v)
+		if not v:get_var("complete") then
+			table.insert(o, v.name)
+			table.insert(q, v)
+		end
+	end
+	if next(o) == nil then
+		quest_utils.message("There are no active quests")
+		return
 	end
 	choice = helper.get_user_choice({message=_ "Active quests:"}, o)
 	q[choice]:display_objectives()

@@ -112,52 +112,31 @@ wesnoth.register_wml_action("wandering_monsters",wandering_monsters)
 
 
 --! [pronouns], given a unit filter (takes first unit) or a gender, sets the
--- prounoun variable accordingly.
+-- given variable accordingly.
 --
 -- Example:
 -- [pronouns]
 --     [filter]
 --         name=Scott
 --     [/filter]
+--     variable=nose
 -- [/pronouns]
 --
--- The pronoun variable is structured as follows:
--- pronoun.nom :: The nominative pronoun
--- pronoun.acc :: The accusative pronoun
--- pronoun.pos :: The possessive pronoun
--- pronoun.uc  :: A copy of pronoun with the first letter of each pronoun capitalized
+-- The "nose" variable would then be structured as follows:
+-- nose.nom :: The nominative pronoun
+-- nose.acc :: The accusative pronoun
+-- nose.pos :: The possessive pronoun
+-- nose.uc  :: A copy of nose with the first letter of each pronoun capitalized
 --
--- TODO: This should allow a variable name to be chosen.
+-- TODO: replace nose.uc with a helper capfirst function.
 local function pronouns(args)
-    local args=args.__parsed
-    local gender = args.gender
-    local filter = helper.get_child(args,"filter")
-    if type(filter) == "table" then
-        wesnoth.fire("store_unit", {
-            [1] = { "filter", filter },
-            variable = "unit_store",
-            kill = true
-            })
-        gender=wesnoth.get_variable("unit_store[0].gender")
-        wesnoth.set_variable("unit_store")
-    end
-    if gender == 'male' then
-    wesnoth.set_variable("pronoun", {
-        nom='he',acc='him',pos='his',
-        {'uc', {nom='He',acc='him',pos='His'}}
-    })
-    elseif gender == 'female' then
-    wesnoth.set_variable("pronoun", {
-        nom='she',acc='her',pos='hers',
-        {'uc', {nom='She',acc='Her',pos='Hers'}}
-    })
-    else
-    wesnoth.set_variable("pronoun", {
-        nom='ze',acc='hir',pos='hirs',
-        {'uc', {nom='Ze',acc='Hir',pos='Hirs'}}
-    })
-    
-    end
+	local args=args.__parsed
+	local filter = helper.get_child(args,"filter")
+	if filter == nil then error("~wml:[pronouns] missing required filter child.") end
+	local variable = args.variable
+	if variable == nil then error("~wml:[pronouns] missing required variable= attribute.") end
+	local u = wesnoth.get_units(filter)[1]
+	wesnoth.set_variable(variable, quest_utils.get_pronouns(u))
 end
 wesnoth.register_wml_action("pronouns",pronouns)
 

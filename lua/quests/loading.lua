@@ -27,6 +27,7 @@ local quest = {
 		o.name = cfg.name
 		o.id = cfg.id
 		o.portrait = cfg.portrait
+		o.objectives = cfg.objectives
 		
 		for obj in helper.child_range(cfg, "map") do
 			if obj.id ~= nil and obj.id == map.id then
@@ -40,6 +41,24 @@ local quest = {
 		table.insert(quests, o)
 		quests[o.id] = o
 		return o
+	end,
+	
+	mark_complete = function(self)
+		self.cfg = {
+			id = self.id,
+			name = self.name,
+			portrait = self.portrait,
+			objectives = self:generate_objectives(),
+		}
+		local qs = helper.get_variable_array("quest")
+		for i=1,#qs do
+			if qs[i].id == self.id then
+				qs[i] = self:dump()
+				helper.set_variable_array("quest", qs)
+				break
+			end
+		end
+		self:set_var("complete", true)
 	end,
 	
 	dump = function(self)
@@ -61,7 +80,8 @@ local quest = {
 	end,
 	
 	display_objectives = function(self)
-		quest_utils.message(self.portrait, self:generate_objectives())
+		objectives = self.objectives or self:generate_objectives()
+		quest_utils.message(self.portrait, objectives)
 	end,
 	
 	generate_objectives = function(self)
@@ -134,10 +154,7 @@ local quest = {
 	id = nil,
 	name = nil,
 	portrait = nil,
-	is_active = function(self) return false end,
-	
-	-- Contains a mapping of scenario ids and quest center keys to functions.
-	scenarios = {}
+	complete = false,
 }
 quest_mt.__index = quest
 

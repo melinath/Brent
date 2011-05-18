@@ -171,9 +171,9 @@ local exit = {
 	end,
 	activate = function(self)
 		local c = wesnoth.current.event_context
-		wesnoth.fire_event("exit", c.x1, c.y1, c.x2, c.y2)
 		wesnoth.set_variable("start_x", self.start_x)
 		wesnoth.set_variable("start_y", self.start_y)
+		wesnoth.fire_event("exit", c.x1, c.y1, c.x2, c.y2)
 		local e = {
 			name = "victory",
 			save = true,
