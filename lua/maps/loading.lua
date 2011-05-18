@@ -115,16 +115,23 @@ local interaction = {
 			local c = wesnoth.current.event_context
 			local u = wesnoth.get_unit(c.x1, c.y1)
 			if u ~= nil and wesnoth.match_unit(u, self.filter) then
-				self:activate()
+				wesnoth.fire("store_unit", {{"filter", {id=u.id}}, variable="unit", kill=false})
+				wesnoth.set_variable("x1", c.x1)
+				wesnoth.set_variable("x2", c.x2)
+				wesnoth.set_variable("y1", c.y1)
+				wesnoth.set_variable("y2", c.y2)
+				for i=1,#self.command do
+					local v = self.command[i]
+					wesnoth.fire(v[1], v[2])
+				end
+				wesnoth.set_variable("unit")
+				wesnoth.set_variable("x1")
+				wesnoth.set_variable("x2")
+				wesnoth.set_variable("y1")
+				wesnoth.set_variable("y2")
 			end
 		elseif name == "prestart" and self.image and self.x and self.y then
 			items.place_image(self.x, self.y, self.image)
-		end
-	end,
-	activate = function(self)
-		for i=1,#self.command do
-			local v = self.command[i]
-			wesnoth.fire(v[1], v[2])
 		end
 	end,
 	
