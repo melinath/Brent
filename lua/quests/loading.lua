@@ -17,21 +17,16 @@ end
 
 
 --! Quest class
+local quest_mt = {}
 local quest = {
 	new = function(self, cfg)
 		local o = {}
-		setmetatable(o, self)
-		self.__index = self
-		o:setup(cfg)
-		table.insert(quests, o)
-		return o
-	end,
-	
-	setup = function(self, cfg)
-		self.cfg = cfg
-		self.name = cfg.name
-		self.id = cfg.id
-		self.portrait = cfg.portrait
+		setmetatable(o, quest_mt)
+		
+		o.cfg = cfg
+		o.name = cfg.name
+		o.id = cfg.id
+		o.portrait = cfg.portrait
 		
 		for obj in helper.child_range(cfg, "map") do
 			if obj.id ~= nil and obj.id == map.id then
@@ -42,10 +37,31 @@ local quest = {
 				end
 			end
 		end
+		table.insert(quests, o)
+		quests[o.id] = o
+		return o
 	end,
 	
 	dump = function(self)
 		return self.cfg
+	end,
+	
+	get_var_name = function(self, key, namespace)
+		if key == nil then error("key is nil; expected string.") end
+		if namespace == nil then namespace = self.id end
+		return string.format("quests.%s.%s", namespace, key)
+	end,
+	
+	get_var = function(self, key, namespace)
+		return wesnoth.get_variable(self:get_var_name(key, namespace))
+	end,
+	
+	set_var = function(self, key, value, namespace)
+		wesnoth.set_variable(self:get_var_name(key, namespace), value)
+	end,
+	
+	display_objectives = function(self)
+		quest_utils.message(self.portrait, self:generate_objectives())
 	end,
 	
 	generate_objectives = function(self)
@@ -114,10 +130,6 @@ local quest = {
 		return string.sub(tostring(objectives), 1, -2)
 	end,
 	
-	display_objectives = function(self)
-		quest_utils.message(self.portrait, self:generate_objectives())
-	end,
-	
 	cfg = nil,
 	id = nil,
 	name = nil,
@@ -127,6 +139,7 @@ local quest = {
 	-- Contains a mapping of scenario ids and quest center keys to functions.
 	scenarios = {}
 }
+quest_mt.__index = quest
 
 
 local function create_quest(cfg)

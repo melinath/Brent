@@ -46,7 +46,7 @@ quest_utils.display_objectives = function()
 	end
 	local o = {}
 	local q = {}
-	for k,v in pairs(quests) do
+	for k,v in ipairs(quests) do
 		table.insert(o, v.name)
 		table.insert(q, v)
 	end
