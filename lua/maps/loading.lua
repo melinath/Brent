@@ -241,6 +241,9 @@ local exit_canceler = {
 			end
 		end
 	end,
+	dump = function(self)
+		return self.cfg
+	end,
 }
 
 
@@ -267,6 +270,9 @@ function game_events.on_load(cfg)
 			local exit = exit:new()
 			exit:setup(v2)
 			table.remove(cfg, i)
+		elseif v[1] == "cancel_exit" then
+			cancel_exit(v2)
+			table.remove(cfg, i)
 		end
 	end
 	old_on_load(cfg)
@@ -282,6 +288,9 @@ function game_events.on_save()
 	end
 	for i=1, #exits do
 		table.insert(cfg, {"exit", exits[i]:dump()})
+	end
+	for i=1,#exit_cancelers do
+		table.insert(cfg, {"exit", exit_cancelers[i]:dump()})
 	end
 	return cfg
 end

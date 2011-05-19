@@ -12,12 +12,12 @@ _ = wesnoth.textdomain "wesnoth-Brent"
 -- Factions: dwarves, faeries, flame 
 
 local function faction_shift(args)
-    local args = args.__parsed
-    for f,v in pairs(args) do
-        o=wesnoth.get_variable('factions.'..f) or 0
-        wesnoth.set_variable("factions."..f,o+v)
-    end
-    wesnoth.set_variable("unit_store")
+	local args = args.__parsed
+	for f,v in pairs(args) do
+		o=wesnoth.get_variable('factions.'..f) or 0
+		wesnoth.set_variable("factions."..f,o+v)
+	end
+	wesnoth.set_variable("unit_store")
 end
 
 wesnoth.register_wml_action("faction_shift",faction_shift)
@@ -28,42 +28,28 @@ wesnoth.register_wml_action("faction_shift",faction_shift)
 -- center. Takes a filter for the unit(s). value= is the amount. Range is -1000-1000.
 
 local function alignment_shift(args)
-    args = args.__parsed
-    local filter = helper.get_child(args, "filter")
-    local shift = args.type
-    local val = args.value
-    wesnoth.fire("store_unit", {
-        [1] = { "filter", filter },
-        variable = "unit_store",
-        kill = true
-    })
-    for i=0,wesnoth.get_variable("unit_store.length")-1 do
-        local alignment=wesnoth.get_variable("unit_store["..i.."].variables.alignment")
-        if(shift=='good') then
-            alignment = alignment + val
-            if alignment>1000 then alignment=1000 end
-        end
-        if(shift=='bad') then
-            alignment = alignment - val
-            if alignment<-1000 then alignment=-1000 end
-        end
-        if(shift=='neutral') then
-            if(alignment>0) then
-                alignment = alignment - val
-                if alignment < 0 then alignment = 0 end
-            end
-            if(alignment<0) then
-                alignment = alignment + val
-                if alignment > 0 then alignment = 0 end
-            end
-        end
-        wesnoth.set_variable("unit_store["..i.."].variables.alignment",alignment)
-        wesnoth.fire("unstore_unit", {
-            variable = "unit_store[" .. i .. "]",
-            find_vacant = false
-        })
-    end
-    wesnoth.set_variable("unit_store")
+	local args = args.__parsed
+	local filter = helper.get_child(args, "filter")
+	local shift = args.type
+	local val = args.value
+	local units = wesnoth.get_units(filter)
+	
+	for i=1,#units do
+		local vars = units[i].variables
+		local align = vars.alignment
+		if shift=='good' then
+			align = math.min(align + val, 1000)
+		elseif shift=='bad' then
+			align = math.max(align - val, -1000)
+		elseif shift=='neutral' then
+			if align > 0 then
+				align = math.max(align - val, 0)
+			elseif align < 0 then
+				align = math.min(align + val, 0)
+			end
+		end
+		vars.alignment = align
+	end
 end
 wesnoth.register_wml_action("alignment_shift",alignment_shift)
 
