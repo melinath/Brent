@@ -72,6 +72,18 @@ map = {
 	end
 }
 
+
+-- Disallow village captures by side one.
+local villages = {}
+local function add_village(x, y)
+	if villages[x] == nil then villages[x] = {} end
+	villages[x][y] = wesnoth.get_village_owner(x, y)
+end
+for i, loc in ipairs(wesnoth.get_locations{terrain="*^V*"}) do
+	add_village(unpack(loc))
+end
+
+
 interactions = {}
 
 --! Interaction base class
@@ -334,6 +346,17 @@ function game_events.on_event(name)
 						end
 					end
 					if activate then exits[i]:activate() end
+				end
+			end
+		elseif name == "capture" then
+			local c = wesnoth.current.event_context
+			local u = wesnoth.get_unit(c.x1, c.y1)
+			
+			if u == nil then
+				add_village(c.x1, c.y1)
+			elseif u.side == 1 then
+				if villages[c.x1] ~= nil and villages[c.x1][c.y1] ~= nil then
+					wesnoth.set_village_owner(c.x1, c.y1, villages[c.x1][c.y1])
 				end
 			end
 		end
