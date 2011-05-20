@@ -12,12 +12,12 @@ _ = wesnoth.textdomain "wesnoth-Brent"
 -- Factions: dwarves, faeries, flame 
 
 local function faction_shift(args)
-    local args = args.__parsed
-    for f,v in pairs(args) do
-        o=wesnoth.get_variable('factions.'..f) or 0
-        wesnoth.set_variable("factions."..f,o+v)
-    end
-    wesnoth.set_variable("unit_store")
+	local args = args.__parsed
+	for f,v in pairs(args) do
+		o=wesnoth.get_variable('factions.'..f) or 0
+		wesnoth.set_variable("factions."..f,o+v)
+	end
+	wesnoth.set_variable("unit_store")
 end
 
 wesnoth.register_wml_action("faction_shift",faction_shift)
@@ -28,42 +28,28 @@ wesnoth.register_wml_action("faction_shift",faction_shift)
 -- center. Takes a filter for the unit(s). value= is the amount. Range is -1000-1000.
 
 local function alignment_shift(args)
-    args = args.__parsed
-    local filter = helper.get_child(args, "filter")
-    local shift = args.type
-    local val = args.value
-    wesnoth.fire("store_unit", {
-        [1] = { "filter", filter },
-        variable = "unit_store",
-        kill = true
-    })
-    for i=0,wesnoth.get_variable("unit_store.length")-1 do
-        local alignment=wesnoth.get_variable("unit_store["..i.."].variables.alignment")
-        if(shift=='good') then
-            alignment = alignment + val
-            if alignment>1000 then alignment=1000 end
-        end
-        if(shift=='bad') then
-            alignment = alignment - val
-            if alignment<-1000 then alignment=-1000 end
-        end
-        if(shift=='neutral') then
-            if(alignment>0) then
-                alignment = alignment - val
-                if alignment < 0 then alignment = 0 end
-            end
-            if(alignment<0) then
-                alignment = alignment + val
-                if alignment > 0 then alignment = 0 end
-            end
-        end
-        wesnoth.set_variable("unit_store["..i.."].variables.alignment",alignment)
-        wesnoth.fire("unstore_unit", {
-            variable = "unit_store[" .. i .. "]",
-            find_vacant = false
-        })
-    end
-    wesnoth.set_variable("unit_store")
+	local args = args.__parsed
+	local filter = helper.get_child(args, "filter")
+	local shift = args.type
+	local val = args.value
+	local units = wesnoth.get_units(filter)
+	
+	for i=1,#units do
+		local vars = units[i].variables
+		local align = vars.alignment
+		if shift=='good' then
+			align = math.min(align + val, 1000)
+		elseif shift=='bad' then
+			align = math.max(align - val, -1000)
+		elseif shift=='neutral' then
+			if align > 0 then
+				align = math.max(align - val, 0)
+			elseif align < 0 then
+				align = math.min(align + val, 0)
+			end
+		end
+		vars.alignment = align
+	end
 end
 wesnoth.register_wml_action("alignment_shift",alignment_shift)
 
@@ -112,52 +98,31 @@ wesnoth.register_wml_action("wandering_monsters",wandering_monsters)
 
 
 --! [pronouns], given a unit filter (takes first unit) or a gender, sets the
--- prounoun variable accordingly.
+-- given variable accordingly.
 --
 -- Example:
 -- [pronouns]
 --     [filter]
 --         name=Scott
 --     [/filter]
+--     variable=nose
 -- [/pronouns]
 --
--- The pronoun variable is structured as follows:
--- pronoun.nom :: The nominative pronoun
--- pronoun.acc :: The accusative pronoun
--- pronoun.pos :: The possessive pronoun
--- pronoun.uc  :: A copy of pronoun with the first letter of each pronoun capitalized
+-- The "nose" variable would then be structured as follows:
+-- nose.nom :: The nominative pronoun
+-- nose.acc :: The accusative pronoun
+-- nose.pos :: The possessive pronoun
+-- nose.uc  :: A copy of nose with the first letter of each pronoun capitalized
 --
--- TODO: This should allow a variable name to be chosen.
+-- TODO: replace nose.uc with a helper capfirst function.
 local function pronouns(args)
-    local args=args.__parsed
-    local gender = args.gender
-    local filter = helper.get_child(args,"filter")
-    if type(filter) == "table" then
-        wesnoth.fire("store_unit", {
-            [1] = { "filter", filter },
-            variable = "unit_store",
-            kill = true
-            })
-        gender=wesnoth.get_variable("unit_store[0].gender")
-        wesnoth.set_variable("unit_store")
-    end
-    if gender == 'male' then
-    wesnoth.set_variable("pronoun", {
-        nom='he',acc='him',pos='his',
-        {'uc', {nom='He',acc='him',pos='His'}}
-    })
-    elseif gender == 'female' then
-    wesnoth.set_variable("pronoun", {
-        nom='she',acc='her',pos='hers',
-        {'uc', {nom='She',acc='Her',pos='Hers'}}
-    })
-    else
-    wesnoth.set_variable("pronoun", {
-        nom='ze',acc='hir',pos='hirs',
-        {'uc', {nom='Ze',acc='Hir',pos='Hirs'}}
-    })
-    
-    end
+	local args=args.__parsed
+	local filter = helper.get_child(args,"filter")
+	if filter == nil then error("~wml:[pronouns] missing required filter child.") end
+	local variable = args.variable
+	if variable == nil then error("~wml:[pronouns] missing required variable= attribute.") end
+	local u = wesnoth.get_units(filter)[1]
+	wesnoth.set_variable(variable, quest_utils.get_pronouns(u))
 end
 wesnoth.register_wml_action("pronouns",pronouns)
 

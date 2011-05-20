@@ -6,7 +6,7 @@ local time_variable = 'time'
 
 
 function time_utils.get_time()
-	return wesnoth.get_variable(time_variable) or 0
+	return wesnoth.get_variable(time_variable)
 end
 
 

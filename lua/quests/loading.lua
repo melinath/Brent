@@ -17,21 +17,17 @@ end
 
 
 --! Quest class
+local quest_mt = {}
 local quest = {
 	new = function(self, cfg)
 		local o = {}
-		setmetatable(o, self)
-		self.__index = self
-		o:setup(cfg)
-		table.insert(quests, o)
-		return o
-	end,
-	
-	setup = function(self, cfg)
-		self.cfg = cfg
-		self.name = cfg.name
-		self.id = cfg.id
-		self.portrait = cfg.portrait
+		setmetatable(o, quest_mt)
+		
+		o.cfg = cfg
+		o.name = cfg.name
+		o.id = cfg.id
+		o.portrait = cfg.portrait
+		o.objectives = cfg.objectives
 		
 		for obj in helper.child_range(cfg, "map") do
 			if obj.id ~= nil and obj.id == map.id then
@@ -42,10 +38,58 @@ local quest = {
 				end
 			end
 		end
+		table.insert(quests, o)
+		quests[o.id] = o
+		return o
+	end,
+	
+	mark_complete = function(self)
+		reward = helper.get_child(self.cfg, "reward")
+		if reward ~= nil then
+			if reward.experience then
+				local main_id = wesnoth.get_variable('main.id')
+				local u = wesnoth.get_units{id=main_id}[1]
+				u.experience = u.experience + reward.experience
+			end
+		end
+		self.cfg = {
+			id = self.id,
+			name = self.name,
+			portrait = self.portrait,
+			objectives = self:generate_objectives(),
+		}
+		local qs = helper.get_variable_array("quest")
+		for i=1,#qs do
+			if qs[i].id == self.id then
+				qs[i] = self:dump()
+				helper.set_variable_array("quest", qs)
+				break
+			end
+		end
+		self:set_var("complete", true)
 	end,
 	
 	dump = function(self)
 		return self.cfg
+	end,
+	
+	get_var_name = function(self, key, namespace)
+		if key == nil then error("key is nil; expected string.") end
+		if namespace == nil then namespace = self.id end
+		return string.format("quests.%s.%s", namespace, key)
+	end,
+	
+	get_var = function(self, key, namespace)
+		return wesnoth.get_variable(self:get_var_name(key, namespace))
+	end,
+	
+	set_var = function(self, key, value, namespace)
+		wesnoth.set_variable(self:get_var_name(key, namespace), value)
+	end,
+	
+	display_objectives = function(self)
+		objectives = self.objectives or self:generate_objectives()
+		quest_utils.message(self.portrait, objectives)
 	end,
 	
 	generate_objectives = function(self)
@@ -60,6 +104,8 @@ local quest = {
 		
 		local bullet = "&#8226; "
 		
+		-- Each objective can have show_if and also a code="" to hold lua code...
+		-- The lua code should return a string which is the status of the quest.
 		for obj in helper.child_range(self.cfg, "objective") do
 			local show_if = helper.get_child(obj, "show_if")
 			if not show_if or wesnoth.eval_conditional(show_if) then
@@ -71,10 +117,19 @@ local quest = {
 					caption = caption .. "\n"
 				end
 				
+				local description = obj.description
+				if obj.code then
+					local code = loadstring(obj.code)
+					local r = code()
+					if r ~= nil then
+						description = description .. " (" .. r .. ")"
+					end
+				end
+				
 				if condition == "succeed" then
-					success_objectives = success_objectives .. caption .. color_prefix(0, 255, 0) .. bullet .. obj.description .. "</span>" .. "\n"
+					success_objectives = success_objectives .. caption .. color_prefix(0, 255, 0) .. bullet .. description .. "</span>" .. "\n"
 				elseif condition == "fail" then
-					fail_objectives = fail_objectives .. caption .. color_prefix(255, 0, 0) .. bullet .. obj.description .. "</span>" .. "\n"
+					fail_objectives = fail_objectives .. caption .. color_prefix(255, 0, 0) .. bullet .. description .. "</span>" .. "\n"
 				else
 					wesnoth.message "Unknown condition, ignoring."
 				end
@@ -103,19 +158,13 @@ local quest = {
 		return string.sub(tostring(objectives), 1, -2)
 	end,
 	
-	display_objectives = function(self)
-		quest_utils.message(self.portrait, self:generate_objectives())
-	end,
-	
 	cfg = nil,
 	id = nil,
 	name = nil,
 	portrait = nil,
-	is_active = function(self) return false end,
-	
-	-- Contains a mapping of scenario ids and quest center keys to functions.
-	scenarios = {}
+	complete = false,
 }
+quest_mt.__index = quest
 
 
 local function create_quest(cfg)

@@ -111,20 +111,27 @@ local interaction = {
 	end,
 	
 	on_event = function(self, name)
-		if (name == "moveto") then
+		if name == "moveto" then
 			local c = wesnoth.current.event_context
 			local u = wesnoth.get_unit(c.x1, c.y1)
-			if (wesnoth.match_unit(u, self.filter)) then
-				self:activate()
+			if u ~= nil and wesnoth.match_unit(u, self.filter) then
+				wesnoth.fire("store_unit", {{"filter", {id=u.id}}, variable="unit", kill=false})
+				wesnoth.set_variable("x1", c.x1)
+				wesnoth.set_variable("x2", c.x2)
+				wesnoth.set_variable("y1", c.y1)
+				wesnoth.set_variable("y2", c.y2)
+				for i=1,#self.command do
+					local v = self.command[i]
+					wesnoth.fire(v[1], v[2])
+				end
+				wesnoth.set_variable("unit")
+				wesnoth.set_variable("x1")
+				wesnoth.set_variable("x2")
+				wesnoth.set_variable("y1")
+				wesnoth.set_variable("y2")
 			end
 		elseif name == "prestart" and self.image and self.x and self.y then
 			items.place_image(self.x, self.y, self.image)
-		end
-	end,
-	activate = function(self)
-		for i=1,#self.command do
-			local v = self.command[i]
-			wesnoth.fire(v[1], v[2])
 		end
 	end,
 	
@@ -141,6 +148,7 @@ local interaction = {
 }
 
 exits = {}
+exit_cancelers = {}
 
 --! Exit base class
 local exit = {
@@ -169,11 +177,10 @@ local exit = {
 		return wesnoth.match_unit(u, self.filter)
 	end,
 	activate = function(self)
-		local cancel = wesnoth.fire_event("cancel_exit")
-		if cancel then return end
-		wesnoth.fire_event("exit")
+		local c = wesnoth.current.event_context
 		wesnoth.set_variable("start_x", self.start_x)
 		wesnoth.set_variable("start_y", self.start_y)
+		wesnoth.fire_event("exit", c.x1, c.y1, c.x2, c.y2)
 		local e = {
 			name = "victory",
 			save = true,
@@ -186,6 +193,65 @@ local exit = {
 		wesnoth.fire("endlevel", e)
 	end
 }
+
+--! Exit canceler base class
+local exit_canceler = {
+	new = function(self, cfg)
+		local o = cfg or {}
+		setmetatable(o, self)
+		self.__index = self
+		table.insert(exit_cancelers, o)
+		return o
+	end,
+	setup = function(self, cfg)
+		self.cfg = cfg
+		local filter = helper.get_child(cfg, "filter")
+		if filter == nil then error("~wml:[cancel_exit] expects a [filter] child", 0) end
+		self.filter = helper.literal(filter)
+		
+		local cancel_if = helper.get_child(cfg, "cancel_if")
+		if cancel_if ~= nil then
+			local lua = helper.get_child(cancel_if, "lua")
+			if lua ~= nil then
+				self.should_cancel = loadstring(lua.code)
+			end
+		end
+		self.cancel_if = helper.literal(cancel_if)
+		
+		self.command = helper.get_child(cfg, "command")
+	end,
+	should_cancel = function(self)
+		local c = wesnoth.current.event_context
+		local u = wesnoth.get_unit(c.x1, c.y1)
+		
+		if not wesnoth.match_unit(u, self.filter) then return false end
+		if self.cancel_if == nil then return true end
+		
+		local lua = helper.get_child(self.cancel_if, "lua")
+		if lua ~= nil then
+			return loadstring(lua.code)()
+		end
+		return wesnoth.eval_conditional(self.cancel_if)
+	end,
+	run_commands = function(self)
+		if self.command ~= nil then
+			for i=1,#self.command do
+				local v = self.command[i]
+				wesnoth.fire(v[1], v[2])
+			end
+		end
+	end,
+	dump = function(self)
+		return self.cfg
+	end,
+}
+
+
+local function cancel_exit(cfg)
+	local exit_canceler = exit_canceler:new()
+	exit_canceler:setup(cfg)
+end
+wesnoth.register_wml_action("cancel_exit", cancel_exit)
 
 
 local old_on_load = game_events.on_load
@@ -204,6 +270,9 @@ function game_events.on_load(cfg)
 			local exit = exit:new()
 			exit:setup(v2)
 			table.remove(cfg, i)
+		elseif v[1] == "cancel_exit" then
+			cancel_exit(v2)
+			table.remove(cfg, i)
 		end
 	end
 	old_on_load(cfg)
@@ -220,39 +289,52 @@ function game_events.on_save()
 	for i=1, #exits do
 		table.insert(cfg, {"exit", exits[i]:dump()})
 	end
+	for i=1,#exit_cancelers do
+		table.insert(cfg, {"exit", exit_cancelers[i]:dump()})
+	end
 	return cfg
 end
 
 
 local old_on_event = game_events.on_event
 function game_events.on_event(name)
-	if name == "prestart" then
-		map_utils.mark_visited(map.id)
-		map_utils.mark_known(map.id)
-		map_utils.load_shroud(map.id)
-		-- Set starting position.
-		local start_x = wesnoth.get_variable("start_x")
-		local start_y = wesnoth.get_variable("start_y")
-		local main_id = wesnoth.get_variable("main_id")
-		if start_x ~= nil and start_y ~= nil and main_id ~= nil then
-			local unit = wesnoth.get_unit(main_id)
-			wesnoth.put_unit(start_x, start_y, unit)
-			wesnoth.scroll_to_tile(start_x, start_y)
-			wesnoth.set_variable("start_x", nil)
-			wesnoth.set_variable("start_y", nil)
-		end
-		-- Storyboard messages
-		local msgs = helper.get_variable_array("story_message")
-		for i=1,#msgs do
-			wesnoth.fire("narrate", {message=msgs[i].message})
-		end
-		helper.set_variable_array("story_message", {})
-	elseif name == "victory" or name == "defeat" then
-		map_utils.store_shroud(map.id)
-	elseif name == "moveto" then
-		for i=1,#exits do
-			if exits[i]:is_active() then
-				exits[i]:activate()
+	if map.id ~= nil then
+		if name == "prestart" then
+			map_utils.mark_visited(map.id)
+			map_utils.mark_known(map.id)
+			map_utils.load_shroud(map.id)
+			-- Set starting position.
+			local start_x = wesnoth.get_variable("start_x")
+			local start_y = wesnoth.get_variable("start_y")
+			local main_id = wesnoth.get_variable("main.id")
+			if start_x ~= nil and start_y ~= nil and main_id ~= nil then
+				local unit = wesnoth.get_units{id=main_id}[1]
+				wesnoth.put_unit(start_x, start_y, unit)
+				wesnoth.scroll_to_tile(start_x, start_y)
+				wesnoth.set_variable("start_x", nil)
+				wesnoth.set_variable("start_y", nil)
+			end
+			-- Storyboard messages
+			local msgs = helper.get_variable_array("story_message")
+			for i=1,#msgs do
+				wesnoth.fire("narrate", msgs[i])
+			end
+			wesnoth.set_variable "story_message"
+		elseif name == "victory" or name == "defeat" then
+			map_utils.store_shroud(map.id)
+		elseif name == "moveto" then
+			for i=1,#exits do
+				if exits[i]:is_active() then
+					local activate = true
+					for j=1, #exit_cancelers do
+						if exit_cancelers[j]:should_cancel() then
+							activate = false
+							exit_cancelers[j]:run_commands()
+							break
+						end
+					end
+					if activate then exits[i]:activate() end
+				end
 			end
 		end
 	end
