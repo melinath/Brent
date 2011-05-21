@@ -79,9 +79,6 @@ local function add_village(x, y)
 	if villages[x] == nil then villages[x] = {} end
 	villages[x][y] = wesnoth.get_village_owner(x, y)
 end
-for i, loc in ipairs(wesnoth.get_locations{terrain="*^V*"}) do
-	add_village(unpack(loc))
-end
 
 
 interactions = {}
@@ -287,6 +284,9 @@ function game_events.on_load(cfg)
 			table.remove(cfg, i)
 		end
 	end
+	for i, loc in ipairs(wesnoth.get_locations{terrain="*^V*"}) do
+		add_village(unpack(loc))
+	end
 	old_on_load(cfg)
 end
 
@@ -355,7 +355,7 @@ function game_events.on_event(name)
 			if u == nil then
 				add_village(c.x1, c.y1)
 			elseif u.side == 1 then
-				if villages[c.x1] ~= nil and villages[c.x1][c.y1] ~= nil then
+				if villages[c.x1] ~= nil then
 					wesnoth.set_village_owner(c.x1, c.y1, villages[c.x1][c.y1])
 				end
 			end
