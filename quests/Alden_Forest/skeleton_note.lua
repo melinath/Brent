@@ -1,7 +1,6 @@
 local items = wesnoth.require "lua/wml/items.lua"
 local knapsack = "items/knapsack.png"
 local knapsack_bones = "items/knapsack_bones.png"
-local bones_accepted = "quests.sn_bones_accepted"
 local _ = wesnoth.textdomain "wesnoth-Brent"
 
 local c = wesnoth.current.event_context
@@ -13,11 +12,11 @@ local unit = wesnoth.get_unit(x, y)
 local accept_bones = function()
 	items.remove(x, y, knapsack_bones)
 	items.place_image(x, y, knapsack)
-	wesnoth.set_variable(bones_accepted, true)
+	wesnoth.fire_event("accept_skeleton_note", x, y)
 	wesnoth.fire("event", {name="victory", {"message", {speaker=unit.id, message=_ "Now which way was it to Port Meiran?"}}})
 end
 
-if not wesnoth.get_variable(bones_accepted) then
+if quests["skeleton_note"] == nil then
 	local backpack = "portraits/story/backpack.png"
 	local journal = "portraits/story/journal.png"
 	local bones = "portraits/story/bones.png"
@@ -28,7 +27,7 @@ if not wesnoth.get_variable(bones_accepted) then
 		quest_utils.message(journal, "The bones belong to an explorer named Laeran Markner. According to his journal, he has spent decades searching for his wife, who disappeared under mysterious circumstances.")
 		quest_utils.message(journal, "His last entry reads, 'I've fallen and my leg snapped like a twig. I'm too old. The wolves are coming. Please, if you find my remains, take them back to my family in Port Meiren.'")
 		quest_utils.message(journal, string.format("The script is hasty and hard to read, and looking down, %s notices gnaw marks on the bones.", name))
-		quest_utils.dialog({image=journal, speaker='narrator', message='Do you take the bones?'}, {
+		quest_utils.dialog({image=journal, speaker='narrator', message=_('Do you take the bones?')}, {
 			{
 				opt="Yes, I'll take his bones.",
 				func=accept_bones

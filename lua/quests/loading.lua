@@ -29,21 +29,27 @@ local quest = {
 		o.portrait = cfg.portrait
 		o.objectives = cfg.objectives
 		
-		for obj in helper.child_range(cfg, "map") do
-			if obj.id ~= nil and obj.id == map.id then
-				local c = helper.get_child(obj, "command")
+		o:fire_map_events()
+		
+		table.insert(quests, o)
+		quests[o.id] = o
+		return o
+	end,
+	
+	fire_map_events = function(self)
+		for m in helper.child_range(self.cfg, "map") do
+			if m.id == nil or m.id == map.id then
+				local c = helper.get_child(m, "command")
 				for i=1,#c do
 					local v = c[i]
 					wesnoth.fire(v[1], v[2])
 				end
 			end
 		end
-		table.insert(quests, o)
-		quests[o.id] = o
-		return o
 	end,
 	
 	mark_complete = function(self)
+		self.status = 'complete'
 		reward = helper.get_child(self.cfg, "reward")
 		if reward ~= nil then
 			if reward.experience then
@@ -52,11 +58,21 @@ local quest = {
 				u.experience = u.experience + reward.experience
 			end
 		end
+		self:clean()
+	end,
+	
+	mark_failed = function(self)
+		self.status = 'failed'
+		self:clean()
+	end,
+	
+	clean = function(self)
 		self.cfg = {
 			id = self.id,
 			name = self.name,
 			portrait = self.portrait,
 			objectives = self:generate_objectives(),
+			status = self.status
 		}
 		local qs = helper.get_variable_array("quest")
 		for i=1,#qs do
@@ -162,7 +178,7 @@ local quest = {
 	id = nil,
 	name = nil,
 	portrait = nil,
-	complete = false,
+	status = nil,
 }
 quest_mt.__index = quest
 

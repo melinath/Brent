@@ -50,7 +50,7 @@ quest_utils.dialog = function(cfg, options)
 	local o = {}
 	local f = {}
 	for i=1,#options do
-		table.insert(o, options[i].opt)
+		table.insert(o, _(options[i].opt))
 		table.insert(f, options[i].func)
 	end
 	choice = helper.get_user_choice(cfg, o)
