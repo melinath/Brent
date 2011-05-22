@@ -183,6 +183,7 @@ local exit = {
 	is_active = function(self)
 		local c = wesnoth.current.event_context
 		local u = wesnoth.get_unit(c.x1, c.y1)
+		if u == nil then return false end
 		return wesnoth.match_unit(u, self.filter)
 	end,
 	activate = function(self)
