@@ -39,9 +39,8 @@ local quest = {
 	fire_map_events = function(self)
 		for m in helper.child_range(self.cfg, "map") do
 			if m.id == nil or m.id == map.id then
-				local c = helper.get_child(m, "command")
-				for i=1,#c do
-					local v = c[i]
+				for i=1,#m do
+					local v = m[i]
 					wesnoth.fire(v[1], v[2])
 				end
 			end
