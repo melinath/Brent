@@ -28,6 +28,7 @@ local quest = {
 		o.id = cfg.id
 		o.portrait = cfg.portrait
 		o.objectives = cfg.objectives
+		o.status = cfg.status
 		
 		o:fire_map_events()
 		

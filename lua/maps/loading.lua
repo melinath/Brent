@@ -93,7 +93,7 @@ local interaction = {
 			return o
 		end,
 	
-	setup = function(self, cfg)
+	config = function(self, cfg)
 		self.cfg = cfg
 		local filter = helper.get_child(cfg, "filter")
 		if (filter == nil) then error("~wml:[interaction] expects a [filter] child", 0) end
@@ -101,13 +101,7 @@ local interaction = {
 		if (command == nil) then error("~wml:[interaction] expects a [command] child", 0) end
 		self.filter = helper.literal(filter)
 		self.command = helper.literal(command)
-		
-		local setup = helper.get_child(cfg, "setup")
-		if setup ~= nil then
-			setup.name = "prestart"
-			wesnoth.fire("event", setup)
-		end
-		
+		self.setup = helper.get_child(cfg, "setup")
 		self.x = cfg.x
 		self.y = cfg.y
 		self.image = cfg.image
@@ -274,7 +268,7 @@ function game_events.on_load(cfg)
 			table.remove(cfg, i)
 		elseif v[1] == "interaction" then
 			local interaction = interaction:new()
-			interaction:setup(v2)
+			interaction:config(v2)
 			table.remove(cfg, i)
 		elseif v[1] == "exit" then
 			local exit = exit:new()
@@ -333,6 +327,16 @@ function game_events.on_event(name)
 				wesnoth.fire("narrate", msgs[i])
 			end
 			wesnoth.set_variable "story_message"
+			
+			-- set up interactions.
+			for i=1,#interactions do
+				local s = interactions[i].setup
+				if s ~= nil then
+					for j=1,#s do
+						wesnoth.fire(s[j][1], s[j][2])
+					end
+				end
+			end
 		elseif name == "victory" or name == "defeat" then
 			map_utils.store_shroud(map.id)
 		elseif name == "moveto" then
