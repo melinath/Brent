@@ -1,27 +1,17 @@
-local game_events = wesnoth.game_events
-local quest_utils = wesnoth.require "~/add-ons/Brent/lua/quests/utils.lua"
-local helper = wesnoth.require "lua/helper.lua"
-local quest = quest_utils.quest
-local _ = wesnoth.textdomain "wesnoth-Brent"
+--! Functions etc. related to cross-scenario objectives.
+
+local events = wesnoth.require "~add-ons/Brent/lua/generic/events.lua"
+local interface = wesnoth.require "~add-ons/Brent/lua/generic/interface.lua"
 
 
--- Declare global variable "quests" which will be populated
--- each time the campaign starts up.
-quests = {}
-
-
--- cribbed from lua/wml/objectives.lua
-local function color_prefix(r, g, b)
-	return string.format('<span foreground="#%02x%02x%02x">', r, g, b)
-end
+local quests = {}
 
 
 --! Quest class
-local quest_mt = {}
-local quest = {
-	new = function(self, cfg)
-		local o = {}
-		setmetatable(o, quest_mt)
+quest.quest = events.tag("quest", {
+	persist = true,
+	init = function(self, cfg)
+		local o = self:get_parent().init(self, cfg)
 		
 		o.cfg = cfg
 		o.name = cfg.name
@@ -31,15 +21,12 @@ local quest = {
 		o.status = cfg.status
 		
 		o:fire_map_events()
-		
-		table.insert(quests, o)
-		quests[o.id] = o
 		return o
 	end,
 	
 	fire_map_events = function(self)
 		for m in helper.child_range(self.cfg, "map") do
-			if m.id == nil or m.id == map.id then
+			if m.id == nil or m.id == maps.current.id then
 				for i=1,#m do
 					local v = m[i]
 					wesnoth.fire(v[1], v[2])
@@ -60,10 +47,20 @@ local quest = {
 		end
 		self:clean()
 	end,
+	is_complete = function(self)
+		return self.status == 'complete'
+	end,
 	
 	mark_failed = function(self)
 		self.status = 'failed'
 		self:clean()
+	end,
+	is_failed = function(self)
+		return self.status == 'failed'
+	end,
+	
+	is_active = function(self)
+		return not (self.is_complete() or self.is_failed())
 	end,
 	
 	clean = function(self)
@@ -83,10 +80,6 @@ local quest = {
 			end
 		end
 		self:set_var("complete", true)
-	end,
-	
-	dump = function(self)
-		return self.cfg
 	end,
 	
 	get_var_name = function(self, key, namespace)
@@ -118,7 +111,8 @@ local quest = {
 		local fail_string = self.cfg.fail_string or _ "Failure:"
 		local notes_string = self.cfg.notes_string or _ "Notes:"
 		
-		local bullet = "&#8226; "
+		local m = interface.markup
+		local cat = m.concat
 		
 		-- Each objective can have show_if and also a code="" to hold lua code...
 		-- The lua code should return a string which is the status of the quest.
@@ -138,14 +132,14 @@ local quest = {
 					local code = loadstring(obj.code)
 					local r = code()
 					if r ~= nil then
-						description = description .. " (" .. r .. ")"
+						description = cat(description, " (", r, ")")
 					end
 				end
 				
 				if condition == "succeed" then
-					success_objectives = success_objectives .. caption .. color_prefix(0, 255, 0) .. bullet .. description .. "</span>" .. "\n"
+					success_objectives = cat(success_objectives, caption, m.color(0, 255, 0, m.bullet, description), "\n")
 				elseif condition == "fail" then
-					fail_objectives = fail_objectives .. caption .. color_prefix(255, 0, 0) .. bullet .. description .. "</span>" .. "\n"
+					fail_objectives = cat(fail_objectives, caption, m.color(255, 0, 0, m.bullet, description), "\n")
 				else
 					wesnoth.message "Unknown condition, ignoring."
 				end
@@ -154,22 +148,22 @@ local quest = {
 		
 		for note in helper.child_range(self.cfg, "note") do
 			if note.description then
-				notes = notes .. color_prefix(255, 255, 255) .. bullet .. "<small>" .. note.description .. "</small></span>\n"
+				notes = cat(notes, m.color(255, 255, 255, m.bullet, m.small(note.description)), "\n")
 			end
 		end
 		
 		local name = self.cfg.name
 		if name then
-			objectives = "<big>" .. name .. "</big>\n"
+			objectives = cat(m.big(name), "\n")
 		end
 		if success_objectives ~= "" then
-			objectives = objectives .. "<big>" .. success_string .. "</big>\n" .. success_objectives
+			objectives = cat(objectives, m.big(success_string), "\n", success_objectives)
 		end
 		if fail_objectives ~= "" then
-			objectives = objectives .. "<big>" .. fail_string .. "</big>\n" .. fail_objectives
+			objectives = cat(objectives, m.big(fail_string), "\n", fail_objectives)
 		end
 		if notes ~= "" then
-			objectives = objectives .. notes_string .. "\n" .. notes
+			objectives = cat(objectives, notes_string, "\n", notes)
 		end
 		return string.sub(tostring(objectives), 1, -2)
 	end,
@@ -179,31 +173,34 @@ local quest = {
 	name = nil,
 	portrait = nil,
 	status = nil,
-}
-quest_mt.__index = quest
+})
 
-
-local function create_quest(cfg)
-	local q = quest:new(cfg)
-	local qs = helper.get_variable_array("quest")
-	table.insert(qs, q:dump())
-	helper.set_variable_array("quest", qs)
-end
-wesnoth.register_wml_action("quest", create_quest)
-
-
--- load/save overrides
-local old_on_load = game_events.on_load
-function game_events.on_load(cfg)
-	local qs = helper.get_variable_array("quest")
-	for i=1,#qs do
-		local q = quest:new(qs[i])
+-- TODO: This should be done with a dialog and an actual function, not code strings.
+quests.display_objectives_code = [[
+	-- it should be possible to have a "display all" option.
+	local o = {}
+	local q = {}
+	for k,v in ipairs(quests) do
+		if not v:get_var("complete") then
+			table.insert(o, v.name)
+			table.insert(q, v)
+		end
 	end
+	if next(o) == nil then
+		interface.message("There are no active quests")
+		return
+	end
+	choice = helper.get_user_choice({message=_ "Active quests:"}, o)
+	q[choice]:display_objectives()
+]]
+
+
+events.register(function()
+	-- Add the quests menu item
 	menu_item = {
 		id="Quest Objectives",
 		description = _ "Display Quest Objectives",
 		{"command", {{"lua", {code="quest_utils.display_objectives()"}}}}
 	}
 	wesnoth.fire("set_menu_item", menu_item)
-	old_on_load(cfg)
-end
+end, "prestart")

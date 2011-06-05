@@ -1,19 +1,21 @@
-quest_utils = wesnoth.require "~add-ons/Brent/lua/quests/utils.lua"
-time_utils = wesnoth.require "~add-ons/Brent/lua/time/utils.lua"
+--! Modular!
+local function req(str)
+	return wesnoth.require(string.format("~add-ons/Brent/lua/generic/%s.lua", str))
+end
+
+capture = req('capture')
+events = req('events')
+exits = req('exits')
+interactions = req('interactions')
+interface = req('interface')
+maps = req('maps')
+quests = req('quests')
+storyboard = req('storyboard')
+time = req('time')
+units = req('units')
 
 --! General
 wesnoth.dofile "~add-ons/Brent/lua/wml_tags.lua"
-
---! Quests
-wesnoth.dofile "~add-ons/Brent/lua/quests/loading.lua"
-
---! Maps
---  This needs to come after quests so that the map is defined before quests are parsed.
-wesnoth.dofile "~add-ons/Brent/lua/maps/loading.lua"
-wesnoth.dofile "~add-ons/Brent/lua/maps/tags.lua"
-
---! Time
-wesnoth.dofile "~add-ons/Brent/lua/time/loading.lua"
 
 -- load some files for debugging purposes
 debug_utils = wesnoth.require "~add-ons/Wesnoth_Lua_Pack/debug_utils.lua"
