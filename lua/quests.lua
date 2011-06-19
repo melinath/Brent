@@ -1,14 +1,16 @@
 --! Functions etc. related to cross-scenario objectives.
 
-local events = wesnoth.require "~add-ons/Brent/lua/generic/events.lua"
-local interface = wesnoth.require "~add-ons/Brent/lua/generic/interface.lua"
+local events = modular.require "events"
+local interface = modular.require "interface"
+local maps = modular.require "maps"
+local helper = wesnoth.require "lua/helper.lua"
 
 
 local quests = {}
 
 
 --! Quest class
-quest.quest = events.tag("quest", {
+quests.quest = events.tag:new("quest", {
 	persist = true,
 	init = function(self, cfg)
 		local o = self:get_parent().init(self, cfg)
@@ -175,8 +177,8 @@ quest.quest = events.tag("quest", {
 	status = nil,
 })
 
--- TODO: This should be done with a dialog and an actual function, not code strings.
-quests.display_objectives_code = [[
+
+function quests.display()
 	-- it should be possible to have a "display all" option.
 	local o = {}
 	local q = {}
@@ -192,6 +194,11 @@ quests.display_objectives_code = [[
 	end
 	choice = helper.get_user_choice({message=_ "Active quests:"}, o)
 	q[choice]:display_objectives()
+end
+-- TODO: This should be done with a dialog and an actual function, not code strings.
+quests.display_objectives_code = [[
+	local quests = modular.require("quests", "Brent")
+	quests.display()
 ]]
 
 
@@ -200,7 +207,7 @@ events.register(function()
 	menu_item = {
 		id="Quest Objectives",
 		description = _ "Display Quest Objectives",
-		{"command", {{"lua", {code="quest_utils.display_objectives()"}}}}
+		{"command", {{"lua", {code=quests.display_objectives_code}}}}
 	}
 	wesnoth.fire("set_menu_item", menu_item)
 end, "prestart")

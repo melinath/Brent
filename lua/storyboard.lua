@@ -1,5 +1,5 @@
 --! Defines functions and tags for handling fake storyboards.
-local events = wesnoth.require "~add-ons/Brent/lua/modular/events.lua"
+local events = modular.require "events"
 local helper = wesnoth.require "lua/helper.lua"
 
 
