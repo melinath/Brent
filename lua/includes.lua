@@ -8,7 +8,7 @@ markup = modular.require "markup"
 modular.require_tags("exits", "interaction")
 
 --! General
-quests = modular.require("quests", "Brent")
+quests = modular.require("quests/quests", "Brent")
 modular.require("storyboard", "Brent")
 modular.require("units", "Brent")
 modular.require("wml_tags", "Brent")

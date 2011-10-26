@@ -1,15 +1,13 @@
 local helper = wesnoth.require("lua/helper.lua")
 local interface = modular.require("interface")
 local markup = modular.require("markup")
+local events = modular.require("events")
+local maps = modular.require("maps")
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
 --! Base class and functions for dealing with cross-scenario objectives.
 local quests = {}
-
-
---! Global container for all loaded quests.
-quests.quests = {}
 
 
 quests.display = function()
@@ -18,7 +16,8 @@ quests.display = function()
 	local quest_choices = {}
 	local quest_list = {}
 	
-	for i, quest in ipairs(quests.quests) do
+	for i, quest_tag in ipairs(events.tags["quest"].instances) do
+		local quest = quest_tag.quest
 		if quest:is_active() then
 			table.insert(quest_choices, quest.name)
 			table.insert(quest_list, quest)
@@ -28,9 +27,26 @@ quests.display = function()
 		interface.message(_("There are no active quests."))
 		return
 	end
-	local choice = helper.get_user_choice({message=_("Active quests:"}, quest_choices)
+	local choice = helper.get_user_choice({message=_("Active quests:")}, quest_choices)
 	quest_list[choice]:display_objectives()
 end
+
+
+quests.quest_tag = events.tag:new("quest", {
+	persist = true,
+
+	init = function(cls, cfg)
+		--! The quest tag expects a single variable in its cfg: ``path``,
+		--! which is the shortened path to the quest. For example, a path
+		--! of "faeries/0" would translate to loading a quest at
+		--! "~add-ons/Brent/lua/quests/faeries/0.lua".
+		local obj = cls:get_parent().init(cls, cfg)
+		obj.path = "quests/" .. cfg.path
+		obj.quest = modular.dofile(obj.path, "Brent")
+		obj.quest:register_events()
+		return obj
+	end
+})
 
 
 quests.quest = {
@@ -74,7 +90,6 @@ quests.quest = {
 		new_cls.__index = new_cls
 		return new_cls
 	end,
-	
 	
 	get_var_name = function(self, key, namespace)
 		if key == nil then error("key is nil; expected string.") end
@@ -121,12 +136,14 @@ quests.quest = {
 		--! (r, g, b) values.
 		local built_string = ""
 		for i, objective in ipairs(objective_list) do
-			local status_text = objective:get_status_text()
-			local objective_text = objective.description
-			if status_text ~= "" then
-				objective_text = markup.concat(objective_text, " (", status_text, ")")
+			if objective:should_display() then
+				local status_text = objective:get_status_text(quest)
+				local objective_text = objective.description
+				if status_text ~= "" then
+					objective_text = markup.concat(objective_text, " (", status_text, ")")
+				end
+				built_string = markup.concat(built_string, markup.bullet, objective_text, "\n")
 			end
-			built_string = markup.concat(built_string, markup.bullet, objective_text, "\n")
 		end
 		return markup.color(r, g, b, built_string)
 	end,
@@ -149,21 +166,33 @@ quests.quest = {
 		--! return ``true`` from ``conditions_met``.
 		local active = false
 		for i, objective in ipairs(self.success_objectives) do
-			if not objective:conditions_met() then
+			if not objective:conditions_met(self) then
 				active = true
 				break
 			end
 		end
 		if active then
 			for i, objective in ipairs(self.success_objectives) do
-				if objective:conditions_met() then
+				if objective:conditions_met(self) then
 					active = false
 					break
 				end
 			end
 		end
 		return active
-	end
+	end,
+
+	register_events = function(self)
+		--! This function will be run during preload to register events with
+		--! the events framework. By default, runs the registration of events
+		--! for all of the quest's objectives.
+		for i, objective in ipairs(self.success_objectives) do
+			objective:register_events(self)
+		end
+		for i, objectives in ipairs(self.failure_objectives) do
+			objective:register_events(self)
+		end
+	end,
 }
 quests.quest.__index = quests.quest
 
@@ -181,8 +210,8 @@ quests.objectives.base = {
 	
 	--! Attributes !--
 	
-	--! The displayed description of the objective. This will probably be set on
-	--! initialization. It must be set at some point.
+	--! The displayed description of the objective. It must be set at some
+	--! point.
 	description = nil,
 	
 	
@@ -195,41 +224,128 @@ quests.objectives.base = {
 		return new_cls
 	end,
 	
-	init = function(cls, description)
-		local instance = {
-			description = description
-		}
-		setmetatable(instance, cls)
-		return instance
-	end,
-	
 	should_display = function(self)
 		--! Returns ``true`` if the objective should be displayed and ``false``
 		--! otherwise. By default, returns ``true``.
 		return true
 	end,
 	
-	conditions_met = function(self)
+	conditions_met = function(self, quest)
 		--! Returns ``true`` if the objective's conditions have been met and
 		--! ``false`` otherwise. By default, returns ``true``.
 		return true
 	end,
 	
-	get_status_text = function(self)
+	get_status_text = function(self, quest)
 		--! Returns some sort of text representation of the status of the
 		--! objective. By default, returns "Complete" if ``self.conditions_met``
 		--! returns ``true`` and an empty string otherwise.
-		if self:conditions_met() then
+		if self:conditions_met(quest) then
 			return _("Complete")
 		end
 		return ""
+	end,
+
+	register_events = function(self, quest)
+		--! This function will be run during preload to register events with
+		--! the events framework. By default, does nothing.
 	end,
 }
 quests.objectives.base.__index = quests.objectives.base
 
 
+--! Base class for objectives which involve getting a certain count of things.
+quests.objectives.count = quests.objectives.base:new({
+	--! The total count which must be reached to satisfy the objective.
+	total_count = nil,
+	
+	--! Wesnoth variable which is used to store the count for this objective.
+	variable_name = nil,
+	
+	--! Integer by which to increment the count.
+	increment_by = 1,
+
+	get_count = function(self, quest)
+		--! Returns the current count for this objective, as stored in the
+		--! quest's variables as ``self.variable_name``. This may be higher
+		--! than the total count.
+		return quest:get_var(self.variable_name) or 0
+	end,
+
+	increment = function(self, quest)
+		local count = self:get_count(quest)
+		quest:set_var(self.variable_name, count + self.increment_by)
+	end,
+	
+	conditions_met = function(self, quest)
+		return self:get_count(quest) >= self.total_count
+	end,
+	
+	get_status_text = function(self, quest)
+		local current_count = math.max(self:get_count(quest), self.total_count)
+		return string.format("%d/%d", current_count, self.total_count)
+	end,
+})
+
+
+--! Base class for quests which involve killing a certain number of things.
+quests.objectives.kill_count = quests.objectives.count:new({
+	variable_name = 'kill_count',
+	
+	--! Standard unit filter for the units which are dying, or ``nil`` for any
+	--! unit.
+	filter = nil,
+	
+	--! Standard unit filter for the units which are killing, or ``nil`` for
+	--! any unit.
+	filter_second = nil,
+	
+	--! A table of map ids for which the kill count should increment or ``nil``
+	--! if it can increment on any map.
+	maps = nil,
+	
+	register_events = function(self, quest)
+		-- Only register the event if it is valid for the current map.
+		local should_register = true
+		if self.maps ~= nil then
+			should_register = false
+			if maps.current ~= nil then
+				for i, map_id in ipairs(self.maps) do
+					if map_id == maps.current.id then
+						should_register = true
+						break
+					end
+				end
+			end
+		end
+		if should_register then
+			events.register("die", function()
+				-- Only increment the kill count 
+				local c = wesnoth.current.event_context
+				local should_increment = true
+				if self.filter ~= nil then
+					local unit = wesnoth.get_unit(c.x1, c.y1)
+					if not wesnoth.match_unit(unit, self.filter) then
+						should_increment = false
+					end
+				end
+				if should_increment and self.filter_second ~= nil then
+					local second_unit = wesnoth.get_unit(c.x2, c.y2)
+					if not wesnoth.match_unit(second_unit, self.filter_second) then
+						should_increment = false
+					end
+				end
+				if should_increment then
+					self:increment(quest)
+				end
+			end)
+		end
+	end,
+})
+
+
 --! Add the "Quest Objectives" menu item.
-events.register(function()
+events.register("prestart", function()
 	-- Add the quests menu item
 	menu_item = {
 		id="Quest Objectives",
@@ -240,7 +356,7 @@ events.register(function()
 		]]}}}}
 	}
 	wesnoth.fire("set_menu_item", menu_item)
-end, "prestart")
+end)
 
 
 return quests
