@@ -23,7 +23,7 @@ quests.display = function()
 			table.insert(quest_list, quest)
 		end
 	end
-	if next(quest_choices) == nil then
+	if #quest_choices == 0 then
 		interface.message(_("There are no active quests."))
 		return
 	end
@@ -117,15 +117,15 @@ quests.quest = {
 		local failure_string = self:_build_objective_list_string(self.failure_objectives, 255, 0, 0)
 		local note_string = self:_build_objective_list_string(self.notes, 255, 255, 255)
 		
-		local objective_string = markup.concat(m.big(self.name), "\n")
+		local objective_string = markup.concat(markup.big(self.name), "\n")
 		if success_string ~= "" then
-			objective_string = markup.concat(m.big(_("Success:")), "\n", success_string)
+			objective_string = markup.concat(objective_string, markup.big(_("Success:")), "\n", success_string, "\n")
 		end
 		if failure_string ~= "" then
-			objective_string = markup.concat(m.big(_("Failure:")), "\n", failure_string)
+			objective_string = markup.concat(objective_string, markup.big(_("Failure:")), "\n", failure_string, "\n")
 		end
 		if note_string ~= "" then
-			objective_string = markup.concat(m.big(_("Notes:")), "\n", note_string)
+			objective_string = markup.concat(objective_string, markup.big(_("Notes:")), "\n", note_string, "\n")
 		end
 		return tostring(objective_string)
 	end,
@@ -137,7 +137,7 @@ quests.quest = {
 		local built_string = ""
 		for i, objective in ipairs(objective_list) do
 			if objective:should_display() then
-				local status_text = objective:get_status_text(quest)
+				local status_text = objective:get_status_text(self)
 				local objective_text = objective.description
 				if status_text ~= "" then
 					objective_text = markup.concat(objective_text, " (", status_text, ")")
@@ -145,7 +145,10 @@ quests.quest = {
 				built_string = markup.concat(built_string, markup.bullet, objective_text, "\n")
 			end
 		end
-		return markup.color(r, g, b, built_string)
+		if built_string ~= "" then
+			built_string = markup.color(r, g, b, built_string)
+		end
+		return built_string
 	end,
 	
 	on_success = function(self)
@@ -172,7 +175,7 @@ quests.quest = {
 			end
 		end
 		if active then
-			for i, objective in ipairs(self.success_objectives) do
+			for i, objective in ipairs(self.failure_objectives) do
 				if objective:conditions_met(self) then
 					active = false
 					break
@@ -282,7 +285,7 @@ quests.objectives.count = quests.objectives.base:new({
 	end,
 	
 	get_status_text = function(self, quest)
-		local current_count = math.max(self:get_count(quest), self.total_count)
+		local current_count = math.min(self:get_count(quest), self.total_count)
 		return string.format("%d/%d", current_count, self.total_count)
 	end,
 })

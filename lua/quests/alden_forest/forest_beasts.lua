@@ -4,6 +4,7 @@ local _ = wesnoth.textdomain("wesnoth-Brent")
 
 local quest = quests.quest:new({
 	id = "forest_beasts",
+	name = _("Forest Beasts"),
 
 	success_objectives = {
 		quests.objectives.kill_count:new({
