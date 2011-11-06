@@ -3,6 +3,7 @@ local interface = modular.require("interface")
 local markup = modular.require("markup")
 local events = modular.require("events")
 local maps = modular.require("maps")
+local markup = modular.require("markup")
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
@@ -18,16 +19,27 @@ quests.display = function()
 	
 	for i, quest_tag in ipairs(events.tags["quest"].instances) do
 		local quest = quest_tag.quest
-		if quest:is_active() then
-			table.insert(quest_choices, quest.name)
-			table.insert(quest_list, quest)
+		local name = quest.name
+		if quest.status == 'completed' then
+			name = markup.concat(name, " (", _("Complete"), ")")
+		elseif quest.status == 'failed' then
+			name = markup.concat(name, " (", _("Failed"), ")")
 		end
+		table.insert(quest_choices, name)
+		table.insert(quest_list, quest)
 	end
 	if #quest_choices == 0 then
 		interface.message(_("There are no active quests."))
 		return
 	end
-	local choice = helper.get_user_choice({message=_("Active quests:")}, quest_choices)
+	local choice = helper.get_user_choice(
+		{
+			speaker = 'narrator',
+			caption = _("Quest Log"),
+			image = "portraits/story/journal.png"
+		},
+		quest_choices
+	)
 	quest_list[choice]:display_objectives()
 end
 
@@ -59,14 +71,18 @@ quests.quest = {
 	
 	--! The displayed name of the quest. Must be defined by subclasses.
 	name = nil,
+
+	--! A longer description of the quest, describing (for example) who
+	--! originally assigned the quest.
+	description = nil,
 	
 	--! The [\w+] id of the quest. This will be used as a variable container
 	--! for holding quest variables. Must be defined by subclasses.
 	id = nil,
 	
 	--! The portrait to be used when displaying information about the quest.
-	--! Default: The wesnoth logo.
-	portrait = 'wesnoth-icon.png',
+	--! Default: no portrait.
+	portrait = nil,
 	
 	--! A table of ``quests.objective`` instances which must be satisfied in
 	--! order for the quest to be considered "complete".
@@ -80,14 +96,19 @@ quests.quest = {
 	--! success or failure of the quest, instead simply displaying extra
 	--! information.
 	notes = {},
-	
-	
+
+	--! A cached value of the quest's status. This will either be ``active``,
+	--! ``completed``, or ``failed``.
+	status = nil,
+
+
 	--! Methods !--
 	
 	new = function(cls, cfg)
 		local new_cls = cfg or {}
 		setmetatable(new_cls, cls)
 		new_cls.__index = new_cls
+		new_cls.status = new_cls:get_status()
 		return new_cls
 	end,
 	
@@ -107,7 +128,12 @@ quests.quest = {
 	
 	
 	display_objectives = function(self)
-		interface.message(self.portrait, self:build_objective_string())
+		wesnoth.fire("message", {
+			caption = self.name,
+			image = self.portrait,
+			message = self:build_objective_string(),
+			speaker = 'narrator'
+		})
 	end,
 	
 	build_objective_string = function(self)
@@ -117,7 +143,10 @@ quests.quest = {
 		local failure_string = self:_build_objective_list_string(self.failure_objectives, 255, 0, 0)
 		local note_string = self:_build_objective_list_string(self.notes, 255, 255, 255)
 		
-		local objective_string = markup.concat(markup.big(self.name), "\n")
+		local objective_string = ""
+		if self.description ~= nil then 
+			objective_string = markup.concat(objective_string, self.description, "\n")
+		end
 		if success_string ~= "" then
 			objective_string = markup.concat(objective_string, markup.big(_("Success:")), "\n", success_string, "\n")
 		end
@@ -160,40 +189,53 @@ quests.quest = {
 		--! Hook to run code (such as punishments) when a quest is failed. By
 		--! default, does nothing.
 	end,
-	
-	is_active = function(self)
-		--! Returns ``true`` if this quest is considered "active" i.e. ongoing
-		--! and ``false`` otherwise. By default, a quest is considered "active"
-		--! if at least one of the ``self.success_objectives`` returns ``false``
-		--! from ``conditions_met`` and none of the ``self.failure_objectives``
-		--! return ``true`` from ``conditions_met``.
-		local active = false
+
+	objective_completed = function(self, objective)
+		self.status = self:get_status()
+		if self.status == 'completed' then
+			self:on_success()
+		elseif self.status == 'failed' then
+			self:on_failure()
+		end
+	end,
+
+	get_status = function(self)
+		--! Returns the status of the quest. This will either be ``completed``,
+		--! ``failed``, or ``active``. A quest is considered ``completed`` if
+		--! all of its success objectives have been completed, ``failed`` if any
+		--! of its failure objectives have been completed, and ``active``
+		--! otherwise.
+		local status = 'completed'
 		for i, objective in ipairs(self.success_objectives) do
 			if not objective:conditions_met(self) then
-				active = true
+				status = 'active'
 				break
 			end
 		end
-		if active then
+		if status == 'active' then
 			for i, objective in ipairs(self.failure_objectives) do
 				if objective:conditions_met(self) then
-					active = false
+					status = 'failed'
 					break
 				end
 			end
 		end
-		return active
+		return status
 	end,
 
 	register_events = function(self)
 		--! This function will be run during preload to register events with
 		--! the events framework. By default, runs the registration of events
-		--! for all of the quest's objectives.
+		--! for all of the quest's incomplete objectives.
 		for i, objective in ipairs(self.success_objectives) do
-			objective:register_events(self)
+			if not objective:conditions_met(self) then
+				objective:register_events(self)
+			end
 		end
 		for i, objectives in ipairs(self.failure_objectives) do
-			objective:register_events(self)
+			if not objective:conditions_met(self) then
+				objective:register_events(self)
+			end
 		end
 	end,
 }
@@ -216,8 +258,13 @@ quests.objectives.base = {
 	--! The displayed description of the objective. It must be set at some
 	--! point.
 	description = nil,
-	
-	
+
+	--! A table of objectives which must be completed before this objective. It
+	--! is up to the authors of custom objectives to honor this list when
+	--! registering events.
+	prerequisites = {},
+
+
 	--! Methods !--
 	
 	new = function(cls, cfg)
@@ -233,12 +280,23 @@ quests.objectives.base = {
 		return true
 	end,
 	
+	prerequisites_met = function(self, quest)
+		--! Returns ``true`` if the objective's prerequisites have been met and
+		--! ``false`` otherwise.
+		for i, prerequisite in ipairs(self.prerequisites) do
+			if not prerequisite:conditions_met(quest) then
+				return false
+			end
+		end
+		return true
+	end,
+	
 	conditions_met = function(self, quest)
 		--! Returns ``true`` if the objective's conditions have been met and
 		--! ``false`` otherwise. By default, returns ``true``.
 		return true
 	end,
-	
+
 	get_status_text = function(self, quest)
 		--! Returns some sort of text representation of the status of the
 		--! objective. By default, returns "Complete" if ``self.conditions_met``
@@ -251,10 +309,28 @@ quests.objectives.base = {
 
 	register_events = function(self, quest)
 		--! This function will be run during preload to register events with
-		--! the events framework. By default, does nothing.
+		--! the events framework. By default, does nothing. Note: it is
+		--! important that the registered events only have an effect if the
+		--! objective's prerequisites have been met and if the objective itself
+		--! has not been completed. Events should also call
+		--! ``self:on_completion(quest)`` if they complete the objective's
+		--! goals.  See the kill_count objective for an example implementation.
+	end,
+
+	on_completion = function(self, quest)
+		--! Hook which should be run when the objective is considered
+		--! completed. By default, simply calls
+		--! ``quest:objective_completed(self)``.
+		quest:objective_completed(self)
 	end,
 }
 quests.objectives.base.__index = quests.objectives.base
+
+
+--! Base class for notes. Always return ``false`` for conditions_met.
+quests.objectives.note = quests.objectives.base:new({
+	conditions_met = function(self, quest) return false end
+})
 
 
 --! Base class for objectives which involve getting a certain count of things.
@@ -323,25 +399,72 @@ quests.objectives.kill_count = quests.objectives.count:new({
 		end
 		if should_register then
 			events.register("die", function()
-				-- Only increment the kill count 
-				local c = wesnoth.current.event_context
-				local should_increment = true
-				if self.filter ~= nil then
-					local unit = wesnoth.get_unit(c.x1, c.y1)
-					if not wesnoth.match_unit(unit, self.filter) then
-						should_increment = false
+				if (self:prerequisites_met(quest) and
+					not self:conditions_met(quest)) then
+					-- Only increment the kill count if both filters match.
+					local c = wesnoth.current.event_context
+					local should_increment = true
+					if self.filter ~= nil then
+						local unit = wesnoth.get_unit(c.x1, c.y1)
+						if not wesnoth.match_unit(unit, self.filter) then
+							should_increment = false
+						end
 					end
-				end
-				if should_increment and self.filter_second ~= nil then
-					local second_unit = wesnoth.get_unit(c.x2, c.y2)
-					if not wesnoth.match_unit(second_unit, self.filter_second) then
-						should_increment = false
+					if should_increment and self.filter_second ~= nil then
+						local second_unit = wesnoth.get_unit(c.x2, c.y2)
+						if not wesnoth.match_unit(second_unit,
+												  self.filter_second) then
+							should_increment = false
+						end
 					end
-				end
-				if should_increment then
-					self:increment(quest)
+					if should_increment then
+						self:increment(quest)
+					end
+					if self:conditions_met(quest) then
+						self:on_completion(quest)
+					end
 				end
 			end)
+		end
+	end,
+})
+
+
+--! Base class for objectives which involve going to a location on a certain
+--! map.
+quests.objectives.visit_location = quests.objectives.base:new({
+	--! A table mapping map ids to standard unit filters representing valid
+	--! movements which would fulfill this objective.
+	filters = {},
+
+	--! Wesnoth variable which is used to track whether this location has been
+	--! visited.
+	variable_name = 'location_visited',
+
+	conditions_met = function(self, quest)
+		return quest:get_var(self.variable_name)
+	end,
+
+	mark_visited = function(self, quest)
+		quest:set_var(self.variable_name, true)
+	end,
+
+	register_events = function(self, quest)
+		if maps.current ~= nil then
+			local filter = self.filters[maps.current.id]
+			if filter ~= nil then
+				events.register("moveto", function()
+					if (self:prerequisites_met(quest) and
+						not self:conditions_met(quest)) then
+						local c = wesnoth.current.event_context
+						local unit = wesnoth.get_unit(c.x1, c.y1)
+						if wesnoth.match_unit(unit, filter) then
+							self:mark_visited(quest)
+							self:on_completion(quest)
+						end
+					end
+				end)
+			end
 		end
 	end,
 })
@@ -351,8 +474,8 @@ quests.objectives.kill_count = quests.objectives.count:new({
 events.register("prestart", function()
 	-- Add the quests menu item
 	menu_item = {
-		id="Quest Objectives",
-		description = _ "Display Quest Objectives",
+		id="Quest Log",
+		description = _("Quest Log"),
 		{"command", {{"lua", {code=[[
 			local quests = modular.require("quests/quests", "Brent")
 			quests.display()
