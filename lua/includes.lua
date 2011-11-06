@@ -1,6 +1,7 @@
 -- load some files for debugging purposes
 debug_utils = wesnoth.require "~add-ons/Wesnoth_Lua_Pack/debug_utils.lua"
 modular = wesnoth.require "~add-ons/ModularLua/modular.lua"
+modular.debug()
 
 maps = modular.require "maps"
 inspect = modular.require "inspect"
