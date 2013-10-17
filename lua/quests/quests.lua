@@ -52,7 +52,7 @@ quests.quest_tag = events.tag:new("quest", {
 		--! "~add-ons/Brent/lua/quests/faeries/0.lua".
 		local obj = cls:get_parent().init(cls, cfg)
 		obj.path = "quests/" .. cfg.path
-		obj.quest = modular.dofile(obj.path, "Brent")
+		obj.quest = modular.require(obj.path, "Brent")
 		obj.quest:register_events()
 		return obj
 	end

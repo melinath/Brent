@@ -20,7 +20,7 @@ local function faction_shift(args)
 	wesnoth.set_variable("unit_store")
 end
 
-wesnoth.register_wml_action("faction_shift",faction_shift)
+wesnoth.wml_actions.faction_shift = faction_shift
 
 --! [alignment_shift]
 
@@ -51,7 +51,7 @@ local function alignment_shift(args)
 		vars.alignment = align
 	end
 end
-wesnoth.register_wml_action("alignment_shift",alignment_shift)
+wesnoth.wml_actions.alignment_shift = alignment_shift
 
 -- END CHARACTERISTIC TAGS --
 
@@ -76,10 +76,10 @@ local function wandering_monsters()
         variable="possible_gotos"
         })
     local r=math.random(0,wesnoth.get_variable("possible_gotos.length")-1)
-    local goto=wesnoth.get_variable("possible_gotos["..r.."]")
+    local target=wesnoth.get_variable("possible_gotos["..r.."]")
     
-    wesnoth.set_variable("unit_store[" .. i .. "].goto_x",goto.x)
-    wesnoth.set_variable("unit_store[" .. i .. "].goto_y",goto.y)
+    wesnoth.set_variable("unit_store[" .. i .. "].goto_x",target.x)
+    wesnoth.set_variable("unit_store[" .. i .. "].goto_y",target.y)
     wesnoth.fire("unstore_unit", {
         variable = "unit_store[" .. i .. "]",
         find_vacant = false
@@ -88,7 +88,7 @@ local function wandering_monsters()
     wesnoth.set_variable("unit_store")
     wesnoth.set_variable("possible_gotos")
 end
-wesnoth.register_wml_action("wandering_monsters",wandering_monsters)
+wesnoth.wml_actions.wandering_monsters = wandering_monsters
 
 
 -- END SCENARIO TAGS --
@@ -124,6 +124,6 @@ local function pronouns(args)
 	local u = wesnoth.get_units(filter)[1]
 	wesnoth.set_variable(variable, quest_utils.get_pronouns(u))
 end
-wesnoth.register_wml_action("pronouns",pronouns)
+wesnoth.wml_actions.pronouns = pronouns
 
 -- END UNIT TAGS --

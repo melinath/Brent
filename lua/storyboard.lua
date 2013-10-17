@@ -14,13 +14,13 @@ function storyboard.story_message(cfg)
 		helper.set_variable_array("story_message", msgs)
 	end
 end
-wesnoth.register_wml_action("story_message", story_message)
+wesnoth.wml_actions.story_message = storyboard.story_message
 
 
 events.register(function()
 	local msgs = helper.get_variable_array("story_message")
 	for i=1,#msgs do
-		wesnoth.first("narrate", msgs[i])
+		wesnoth.fire("narrate", msgs[i])
 	end
 	wesnoth.set_variable "story_message"
 end, "prestart")
