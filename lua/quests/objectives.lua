@@ -80,8 +80,13 @@ objectives.base = {
 
 	on_completion = function(self, quest)
 		--! Hook which should be run when the objective is considered
-		--! completed. By default, simply calls
+		--! completed. By default, displays a message and calls
 		--! ``quest:objective_completed(self)``.
+		wesnoth.fire("print", {
+			green = 255,
+			text = markup.concat(_("Objective completed: "), self.description),
+			size = 20
+		})
 		quest:objective_completed(self)
 	end,
 }

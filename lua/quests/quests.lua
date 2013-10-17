@@ -204,11 +204,6 @@ quests.quest = {
 			self:on_success()
 		elseif self.status == 'failed' then
 			self:on_failure()
-		else
-			wesnoth.fire("print", {
-				green = 255,
-				text = markup.concat(_("Objective completed: "), objective.description)
-			})
 		end
 	end,
 
