@@ -85,7 +85,8 @@ objectives.base = {
 		wesnoth.fire("print", {
 			green = 255,
 			text = markup.concat(_("Objective completed: "), self.description),
-			size = 20
+			size = 20,
+			duration = 200
 		})
 		quest:objective_completed(self)
 	end,

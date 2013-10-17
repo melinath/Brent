@@ -184,7 +184,8 @@ quests.quest = {
 		wesnoth.fire("print", {
 			text = markup.concat(_("Quest completed: "), self.name),
 			green = 255,
-			size = 20
+			size = 20,
+			duration = 200
 		})
 	end,
 	
@@ -194,7 +195,8 @@ quests.quest = {
 		wesnoth.fire("print", {
 			text = markup.concat(_("Quest failed: "), self.name),
 			red = 255,
-			size = 20
+			size = 20,
+			duration = 200
 		})
 	end,
 
