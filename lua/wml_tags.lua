@@ -122,7 +122,7 @@ local function pronouns(args)
 	local variable = args.variable
 	if variable == nil then error("~wml:[pronouns] missing required variable= attribute.") end
 	local u = wesnoth.get_units(filter)[1]
-	wesnoth.set_variable(variable, quest_utils.get_pronouns(u))
+	wesnoth.set_variable(variable, units.get_pronouns(u))
 end
 wesnoth.wml_actions.pronouns = pronouns
 
