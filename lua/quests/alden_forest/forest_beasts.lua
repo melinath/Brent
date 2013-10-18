@@ -1,5 +1,7 @@
 local interface = modular.require "interface"
 local units = modular.require "units"
+local maps = modular.require "maps"
+local exits = modular.require "tags/exits"
 local quests = modular.require("quests/quests", "Brent")
 local objectives = modular.require("quests/objectives", "Brent")
 local _ = wesnoth.textdomain("wesnoth-Brent")
@@ -8,7 +10,32 @@ local _ = wesnoth.textdomain("wesnoth-Brent")
 local kill_forest_beasts = objectives.kill_count:new({
 	description = _("Kill 5 Forest Beasts"),
 	total_count = 5,
-	map_filters = {Alden_Forest = {filter_second = {side = 1}}}
+	map_filters = {Alden_Forest = {filter_second = {side = 1}}},
+	register_events = function(self, quest)
+		objectives.kill_count.register_events(self, quest)
+		if maps.current and maps.current.id == "Alden_Forest" and not self:conditions_met(quest) then
+			local objective = self
+			exits.add_handler("World_Map", "cancel", exits.handler:new({
+				matches = function(self)
+					return exits.handler.matches(self) and not objective:conditions_met(quest)
+				end,
+				on_match = function(self)
+					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
+					interface.message(nil,
+						  			  "Hmm...I can't go back yet. I have to catch more game.",
+									  unit.id)
+				end,
+			}))
+			exits.add_handler("Faerie_Battlefield", "cancel", exits.handler.new({
+				on_match = function(self)
+					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
+					interface.message(nil,
+									  "I shouldn't go too far into the forest right now. Maybe another day.",
+									  unit.id)
+				end,
+			}))
+		end
+	end,
 })
 
 local return_to_marensdell = objectives.visit_location:new({
@@ -16,7 +43,7 @@ local return_to_marensdell = objectives.visit_location:new({
 	map_filters = {
 		World_Map = {filter = {x=52, y=39}}
 	},
-	prerequisites = {kill_count_objective},
+	prerequisites = {kill_forest_beasts},
 	on_completion = function(self, quest)
 		local c = wesnoth.current.event_context
 		-- We already know that the triggering unit matched the filter.
@@ -34,7 +61,7 @@ local quest = quests.quest:new({
 	description = _("You're to hunt for food in Alden Forest, then return with the slain beasts to the village of Marensdell."),
 
 	success_objectives = {
-		kill_count_objective,
+		kill_forest_beasts,
 		return_to_marensdell,
 	},
 	notes = {
