@@ -254,15 +254,14 @@ quests.quest.__index = quests.quest
 
 --! Add the "Quest Log" menu item.
 events.register("prestart", function()
-	menu_item = {
+	wesnoth.fire("set_menu_item", {
 		id="Quest Log",
 		description = _("Quest Log"),
 		{"command", {{"lua", {code=[[
 			local quests = modular.require("quests/quests", "Brent")
 			quests.display()
 		]]}}}}
-	}
-	wesnoth.fire("set_menu_item", menu_item)
+	})
 end)
 
 
