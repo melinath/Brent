@@ -238,14 +238,10 @@ quests.quest = {
 		--! the events framework. By default, if the quest is active, runs the 
 		--! registration of events for all of the quest's incomplete objectives.
 		for i, objective in ipairs(self.success_objectives) do
-			if not objective:conditions_met(self) then
-				objective:register_events(self)
-			end
+			objective:register_events(self)
 		end
 		for i, objectives in ipairs(self.failure_objectives) do
-			if not objective:conditions_met(self) then
-				objective:register_events(self)
-			end
+			objective:register_events(self)
 		end
 	end,
 }

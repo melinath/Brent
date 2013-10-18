@@ -68,14 +68,47 @@ objectives.base = {
 		return ""
 	end,
 
+	get_map_events = function(self, quest)
+		--! A table mapping map ids to {event_name, function} tuples.
+		--! If the current map matches one of the map ids, the defined
+		--! functions will be registered at the given event names. The
+		--! functions should be related to this objective - for
+		--! example, setting up the objective, or preventing the
+		--! player from continuing until the objective has been met.
+		--! The special value "*" can be used to match all map ids.
+		--! Events should also call ``self:on_completion(quest)`` if
+		--! they complete the objective's goals.  See the kill_count
+		--! objective for an example implementation.
+		return {}
+	end,
+
+	_register_event = function(self, quest, event_name, func)
+		events.register(event_name, function()
+			if quest.status == 'active' and self:prerequisites_met(quest) and not self:conditions_met(quest) then
+				func(self)
+			end
+		end)
+	end,
+
 	register_events = function(self, quest)
 		--! This function will be run during preload to register events with
-		--! the events framework. By default, does nothing. Note: it is
-		--! important that the registered events only have an effect if the
-		--! objective's prerequisites have been met and if the objective itself
-		--! has not been completed. Events should also call
-		--! ``self:on_completion(quest)`` if they complete the objective's
-		--! goals.  See the kill_count objective for an example implementation.
+		--! the events framework. By default, registers the given map_events
+		--! if and only if the conditions of the objective have *not* been met.
+		if quest.status == "active" and not self:conditions_met(quest) then
+			local map_events = self:get_map_events(quest)
+			if maps.current ~= nil and map_events[maps.current.id] then
+				for i=1, #map_events[maps.current.id] do
+					local event_name, func = table.unpack(map_events[maps.current.id][i])
+					self:_register_event(quest, event_name, func)
+				end
+			end
+			if map_events["*"] then
+				for i=1, #map_events["*"] do
+					local event_name, func = table.unpack(map_events["*"][i])
+					self:_register_event(quest, event_name, func)
+				end
+			end
+		end
 	end,
 
 	on_completion = function(self, quest)
@@ -141,61 +174,43 @@ objectives.count = objectives.base:new({
 --! Base class for quests which involve killing a certain number of things.
 objectives.kill_count = objectives.count:new({
 	variable_name = 'kill_count',
-	
-	--! Standard unit filter for the units which are dying, or ``nil`` for any
-	--! unit.
-	filter = nil,
-	
-	--! Standard unit filter for the units which are killing, or ``nil`` for
-	--! any unit.
-	filter_second = nil,
-	
-	--! A table of map ids for which the kill count should increment or ``nil``
-	--! if it can increment on any map.
-	maps = nil,
-	
-	register_events = function(self, quest)
-		-- Only register the event if it is valid for the current map.
-		local should_register = true
-		if self.maps ~= nil then
-			should_register = false
-			if maps.current ~= nil then
-				for i, map_id in ipairs(self.maps) do
-					if map_id == maps.current.id then
-						should_register = true
-						break
+
+	--! Mapping of map IDs to filters for the kill event. The filters which can be
+	--! provided are SUF keyed in as "filter" and "filter_second". The special string
+	--! "*" can be used to match all map IDs.
+	--!
+	--! Example: map_filters = {["*"] = {filter = {side = 1}}}
+	map_filters = {},
+
+	get_map_events = function(self, quest)
+		local map_events = {}
+		for map_id, filters in ipairs(self.map_filters) do
+			map_events[map_id] = {{"die", function()
+				local filter, filter_second = filters["filter"], filters["filter_second"]
+				local c = wesnoth.current.event_context
+				local should_increment = true
+				if filter ~= nil then
+					local unit = wesnoth.get_unit(c.x1, c.y1)
+					if not wesnoth.match_unit(unit, filter) then
+						should_increment = false
 					end
 				end
-			end
-		end
-		if should_register then
-			events.register("die", function()
-				if quest.status == 'active' and self:prerequisites_met(quest) and not self:conditions_met(quest) then
-					-- Only increment the kill count if both filters match.
-					local c = wesnoth.current.event_context
-					local should_increment = true
-					if self.filter ~= nil then
-						local unit = wesnoth.get_unit(c.x1, c.y1)
-						if not wesnoth.match_unit(unit, self.filter) then
-							should_increment = false
-						end
-					end
-					if should_increment and self.filter_second ~= nil then
-						local second_unit = wesnoth.get_unit(c.x2, c.y2)
-						if not wesnoth.match_unit(second_unit,
-												  self.filter_second) then
-							should_increment = false
-						end
-					end
-					if should_increment then
-						self:increment(quest)
-					end
-					if self:conditions_met(quest) then
-						self:on_completion(quest)
+				if should_increment and filter_second ~= nil then
+					local second_unit = wesnoth.get_unit(c.x2, c.y2)
+					if not wesnoth.match_unit(second_unit,
+											  filter_second) then
+						should_increment = false
 					end
 				end
-			end)
+				if should_increment then
+					self:increment(quest)
+				end
+				if self:conditions_met(quest) then
+					self:on_completion(quest)
+				end
+			end}}
 		end
+		return map_events
 	end,
 })
 
@@ -203,13 +218,13 @@ objectives.kill_count = objectives.count:new({
 --! Base class for objectives which involve going to a location on a certain
 --! map.
 objectives.visit_location = objectives.base:new({
-	--! A table mapping map ids to standard unit filters representing valid
-	--! movements which would fulfill this objective.
-	filters = {},
-
-	--! Wesnoth variable which is used to track whether this location has been
-	--! visited.
 	variable_name = 'location_visited',
+	--! Mapping of map IDs to filters for the moveto event. "filter" (an SUF)
+	--! and "filter_location" are currently supported. The special string "*"
+	--! can be used to match all map IDs.
+	--!
+	--! Example: map_filters = {"*" = {"filter" = {"side" = 1}}}
+	map_filters = {},
 
 	conditions_met = function(self, quest)
 		return quest:get_var(self.variable_name)
@@ -219,22 +234,31 @@ objectives.visit_location = objectives.base:new({
 		quest:set_var(self.variable_name, true)
 	end,
 
-	register_events = function(self, quest)
-		if maps.current ~= nil then
-			local filter = self.filters[maps.current.id]
-			if filter ~= nil then
-				events.register("moveto", function()
-					if quest.status == 'active' and self:prerequisites_met(quest) and not self:conditions_met(quest) then
-						local c = wesnoth.current.event_context
-						local unit = wesnoth.get_unit(c.x1, c.y1)
-						if wesnoth.match_unit(unit, filter) then
-							self:mark_visited(quest)
-							self:on_completion(quest)
-						end
+	get_map_events = function(self, quest)
+		local map_events = {}
+		for map_id, filters in ipairs(self.map_filters) do
+			map_events[map_id] = {{"moveto", function()
+				local c = wesnoth.current.event_context
+				local filter, filter_location = filters["filter"], filters["filter_location"]
+				local matched = true
+				if filter_location ~= nil then
+					if not wesnoth.match_location(c.x1, c.x2, filter_location) then
+						matched = false
 					end
-				end)
-			end
+				end
+				if filter ~= nil then
+					local unit = wesnoth.get_unit(c.x1, c.y1)
+					if not wesnoth.match_unit(unit, filter) then
+						matched = false
+					end
+				end
+				if matched then
+					self:mark_visited(quest)
+					self:on_completion(quest)
+				end
+			end}}
 		end
+		return map_events
 	end,
 })
 
