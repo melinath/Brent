@@ -184,7 +184,7 @@ objectives.kill_count = objectives.count:new({
 
 	get_map_events = function(self, quest)
 		local map_events = {}
-		for map_id, filters in ipairs(self.map_filters) do
+		for map_id, filters in pairs(self.map_filters) do
 			map_events[map_id] = {{"die", function()
 				local filter, filter_second = filters["filter"], filters["filter_second"]
 				local c = wesnoth.current.event_context
@@ -236,7 +236,7 @@ objectives.visit_location = objectives.base:new({
 
 	get_map_events = function(self, quest)
 		local map_events = {}
-		for map_id, filters in ipairs(self.map_filters) do
+		for map_id, filters in pairs(self.map_filters) do
 			map_events[map_id] = {{"moveto", function()
 				local c = wesnoth.current.event_context
 				local filter, filter_location = filters["filter"], filters["filter_location"]
