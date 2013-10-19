@@ -14,7 +14,9 @@ local kill_forest_beasts = objectives.kill_count:init({
 		objectives.kill_count.register_events(self, quest)
 		if maps.current and maps.current.id == "Alden_Forest" and not self:conditions_met(quest) then
 			local objective = self
-			maps.add_exit_handler("World_Map", "cancel", maps.exit_handler:init({
+			maps.exit_handler:init({
+				exit_name = "World_Map",
+				type = "cancel",
 				matches = function(self)
 					return self.class.matches(self) and not objective:conditions_met(quest)
 				end,
@@ -24,15 +26,17 @@ local kill_forest_beasts = objectives.kill_count:init({
 						  			  "Hmm...I can't go back yet. I have to catch more game.",
 									  unit.id)
 				end,
-			}))
-			maps.add_exit_handler("Faerie_Battlefield", "cancel", maps.exit_handler.init({
+			})
+			maps.exit_handler:init({
+				exit_name = "Faerie_Battlefield",
+				type = "cancel",
 				on_match = function(self)
 					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
 					interface.message(nil,
 									  "I shouldn't go too far into the forest right now. Maybe another day.",
 									  unit.id)
 				end,
-			}))
+			})
 		end
 	end,
 })
