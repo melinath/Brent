@@ -6,7 +6,8 @@ inspect = modular.require "inspect"
 maps = modular.require "maps"
 markup = modular.require "markup"
 units = modular.require "units"
-modular.require_tags("exits", "interaction")
+modular.require "interactions"
+modular.require "time"
 
 --! General
 quests = modular.require("quests/quests", "Brent")

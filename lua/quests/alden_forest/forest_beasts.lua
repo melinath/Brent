@@ -1,13 +1,12 @@
 local interface = modular.require "interface"
 local units = modular.require "units"
 local maps = modular.require "maps"
-local exits = modular.require "tags/exits"
 local quests = modular.require("quests/quests", "Brent")
 local objectives = modular.require("quests/objectives", "Brent")
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
-local kill_forest_beasts = objectives.kill_count:new({
+local kill_forest_beasts = objectives.kill_count:init({
 	description = _("Kill 5 Forest Beasts"),
 	total_count = 5,
 	map_filters = {Alden_Forest = {filter_second = {side = 1}}},
@@ -15,9 +14,9 @@ local kill_forest_beasts = objectives.kill_count:new({
 		objectives.kill_count.register_events(self, quest)
 		if maps.current and maps.current.id == "Alden_Forest" and not self:conditions_met(quest) then
 			local objective = self
-			exits.add_handler("World_Map", "cancel", exits.handler:new({
+			maps.add_exit_handler("World_Map", "cancel", maps.exit_handler:init({
 				matches = function(self)
-					return exits.handler.matches(self) and not objective:conditions_met(quest)
+					return self.class.matches(self) and not objective:conditions_met(quest)
 				end,
 				on_match = function(self)
 					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
@@ -26,7 +25,7 @@ local kill_forest_beasts = objectives.kill_count:new({
 									  unit.id)
 				end,
 			}))
-			exits.add_handler("Faerie_Battlefield", "cancel", exits.handler.new({
+			maps.add_exit_handler("Faerie_Battlefield", "cancel", maps.exit_handler.init({
 				on_match = function(self)
 					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
 					interface.message(nil,
@@ -38,7 +37,7 @@ local kill_forest_beasts = objectives.kill_count:new({
 	end,
 })
 
-local return_to_marensdell = objectives.visit_location:new({
+local return_to_marensdell = objectives.visit_location:init({
 	description = _("Return to Marensdell"),
 	map_filters = {
 		World_Map = {filter = {x=52, y=39}}
@@ -55,7 +54,7 @@ local return_to_marensdell = objectives.visit_location:new({
 	end
 })
 
-local quest = quests.quest:new({
+local quest = quests.quest:init({
 	id = "forest_beasts",
 	name = _("Forest Beasts"),
 	description = _("You're to hunt for food in Alden Forest, then return with the slain beasts to the village of Marensdell."),
@@ -65,7 +64,7 @@ local quest = quests.quest:new({
 		return_to_marensdell,
 	},
 	notes = {
-		objectives.note:new({
+		objectives.note:init({
 			description = _("Be careful!")
 		})
 	}

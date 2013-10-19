@@ -1,7 +1,11 @@
 local helper = wesnoth.require("lua/helper.lua")
+
+local events = modular.require("events")
 local interface = modular.require("interface")
 local markup = modular.require("markup")
-local events = modular.require("events")
+local scenario = modular.require("scenario")
+local utils = modular.require("utils")
+
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
@@ -9,61 +13,14 @@ local _ = wesnoth.textdomain("wesnoth-Brent")
 local quests = {}
 
 
-quests.display = function()
-	--! Displays a menu which allows the user to choose quests and view their
-	--! objectives.
-	local quest_choices = {}
-	local quest_list = {}
-	
-	for i, quest_tag in ipairs(events.tags["quest"].instances) do
-		local quest = quest_tag.quest
-		local name = quest.name
-		if quest.status == 'completed' then
-			name = markup.concat(name, " (", _("Complete"), ")")
-		elseif quest.status == 'failed' then
-			name = markup.concat(name, " (", _("Failed"), ")")
-		end
-		table.insert(quest_choices, name)
-		table.insert(quest_list, quest)
-	end
-	if #quest_choices == 0 then
-		interface.message(_("There are no active quests."))
-		return
-	end
-	local choice = helper.get_user_choice(
-		{
-			speaker = 'narrator',
-			caption = _("Quest Log"),
-			image = "portraits/story/journal.png"
-		},
-		quest_choices
-	)
-	quest_list[choice]:display_objectives()
-end
+-- List of quest instances.
+quests.quests = {}
 
 
-quests.quest_tag = events.tag:new("quest", {
-	persist = true,
+quests.quest = utils.class:subclass({
+	--! The base class for quests. In general, this should just be
+	--! instantiated, not subclassed.
 
-	init = function(cls, cfg)
-		--! The quest tag expects a single variable in its cfg: ``path``,
-		--! which is the shortened path to the quest. For example, a path
-		--! of "faeries/0" would translate to loading a quest at
-		--! "~add-ons/Brent/lua/quests/faeries/0.lua".
-		local obj = cls:get_parent().init(cls, cfg)
-		obj.path = "quests/" .. cfg.path
-		obj.quest = modular.require(obj.path, "Brent")
-		obj.quest:register_events()
-		return obj
-	end
-})
-
-
-quests.quest = {
-	--! The base class for quests. This should be extended by calling
-	--! ``quests.quest:new(cfg)``, where ``cfg`` is a table defining overriding
-	--! behavior for the subclass.
-	
 	
 	--! Attributes !--
 	
@@ -102,12 +59,11 @@ quests.quest = {
 
 	--! Methods !--
 	
-	new = function(cls, cfg)
-		local new_cls = cfg or {}
-		setmetatable(new_cls, cls)
-		new_cls.__index = new_cls
-		new_cls.status = new_cls:get_status()
-		return new_cls
+	init = function(cls, cfg)
+		local instance = utils.class.init(cls, cfg)
+		instance.status = instance:get_status()
+		table.insert(quests.quests, quest)
+		return instance
 	end,
 	
 	get_var_name = function(self, key, namespace)
@@ -244,8 +200,25 @@ quests.quest = {
 			objective:register_events(self)
 		end
 	end,
-}
-quests.quest.__index = quests.quest
+})
+
+
+--! Quest tag
+scenario.tag:subclass({
+	name = "quest",
+	persist = true,
+	init = function(cls, cfg)
+		local instance = scenario.tag.init(cls, cfg)
+		--! The quest tag expects a single variable in its cfg: ``path``,
+		--! which is the shortened path to the quest. For example, a path
+		--! of "faeries/0" would translate to loading a quest at
+		--! "~add-ons/Brent/lua/quests/faeries/0.lua".
+		local path = "quests/" .. instance.wml.path
+		local quest = modular.require(path, "Brent")
+		quest:register_events()
+		return instance
+	end
+})
 
 
 --! Add the "Quest Log" menu item.
@@ -259,6 +232,38 @@ events.register("prestart", function()
 		]]}}}}
 	})
 end)
+
+
+quests.display = function()
+	--! Displays a menu which allows the user to choose quests and view their
+	--! objectives.
+	local quest_choices = {}
+	local quest_list = {}
+	
+	for i, quest in ipairs(quests.quests) do
+		local name = quest.name
+		if quest.status == 'completed' then
+			name = markup.concat(name, " (", _("Complete"), ")")
+		elseif quest.status == 'failed' then
+			name = markup.concat(name, " (", _("Failed"), ")")
+		end
+		table.insert(quest_choices, name)
+		table.insert(quest_list, quest)
+	end
+	if #quest_choices == 0 then
+		interface.message(_("There are no active quests."))
+		return
+	end
+	local choice = helper.get_user_choice(
+		{
+			speaker = 'narrator',
+			caption = _("Quest Log"),
+			image = "portraits/story/journal.png"
+		},
+		quest_choices
+	)
+	quest_list[choice]:display_objectives()
+end
 
 
 return quests

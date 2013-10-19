@@ -1,5 +1,6 @@
 local events = modular.require("events")
 local maps = modular.require("maps")
+local utils = modular.require("utils")
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
@@ -7,9 +8,9 @@ local _ = wesnoth.textdomain("wesnoth-Brent")
 objectives = {}
 
 
-objectives.base = {
+objectives.base = utils.class:subclass({
 	--! The base class for objectives. This can be extended by calling
-	--! ``objectives.base:new(cfg)``, where ``cfg`` is a table defining
+	--! ``objectives.base:subclass(cfg)``, where ``cfg`` is a table defining
 	--! overriding behavior for the subclass. Instances of subclasses are meant
 	--! to be used to populate a quest's objective tables.
 	
@@ -27,13 +28,6 @@ objectives.base = {
 
 
 	--! Methods !--
-	
-	new = function(cls, cfg)
-		local new_cls = cfg or {}
-		setmetatable(new_cls, cls)
-		new_cls.__index = new_cls
-		return new_cls
-	end,
 	
 	should_display = function(self)
 		--! Returns ``true`` if the objective should be displayed and ``false``
@@ -123,18 +117,17 @@ objectives.base = {
 		})
 		quest:objective_completed(self)
 	end,
-}
-objectives.base.__index = objectives.base
+})
 
 
 --! Base class for notes. Always return ``false`` for conditions_met.
-objectives.note = objectives.base:new({
+objectives.note = objectives.base:subclass({
 	conditions_met = function(self, quest) return false end
 })
 
 
 --! Base class for objectives which involve getting a certain count of things.
-objectives.count = objectives.base:new({
+objectives.count = objectives.base:subclass({
 	--! The total count which must be reached to satisfy the objective.
 	total_count = nil,
 	
@@ -172,7 +165,7 @@ objectives.count = objectives.base:new({
 
 
 --! Base class for quests which involve killing a certain number of things.
-objectives.kill_count = objectives.count:new({
+objectives.kill_count = objectives.count:subclass({
 	variable_name = 'kill_count',
 
 	--! Mapping of map IDs to filters for the kill event. The filters which can be
@@ -217,7 +210,7 @@ objectives.kill_count = objectives.count:new({
 
 --! Base class for objectives which involve going to a location on a certain
 --! map.
-objectives.visit_location = objectives.base:new({
+objectives.visit_location = objectives.base:subclass({
 	variable_name = 'location_visited',
 	--! Mapping of map IDs to filters for the moveto event. "filter" (an SUF)
 	--! and "filter_location" are currently supported. The special string "*"
