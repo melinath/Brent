@@ -37,7 +37,7 @@ quests.quest = utils.class:subclass({
 	
 	--! The portrait to be used when displaying information about the quest.
 	--! Default: Wesnoth icon.
-	portrait = 'wesnoth-icon.png',
+	portrait = "portraits/bfw-logo.png",
 	
 	--! A table of ``quests.objective`` instances which must be satisfied in
 	--! order for the quest to be considered "complete".
