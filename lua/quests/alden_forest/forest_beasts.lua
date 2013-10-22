@@ -58,6 +58,7 @@ local return_to_marensdell = objectives.visit_location:init({
 	end
 })
 
+
 local quest = quests.quest:init({
 	id = "forest_beasts",
 	name = _("Forest Beasts"),
@@ -73,5 +74,6 @@ local quest = quests.quest:init({
 		})
 	}
 })
+
 
 return quest

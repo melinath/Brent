@@ -36,8 +36,8 @@ quests.quest = utils.class:subclass({
 	id = nil,
 	
 	--! The portrait to be used when displaying information about the quest.
-	--! Default: no portrait.
-	portrait = nil,
+	--! Default: Wesnoth icon.
+	portrait = 'wesnoth-icon.png',
 	
 	--! A table of ``quests.objective`` instances which must be satisfied in
 	--! order for the quest to be considered "complete".
@@ -62,7 +62,7 @@ quests.quest = utils.class:subclass({
 	init = function(cls, cfg)
 		local instance = utils.class.init(cls, cfg)
 		instance.status = instance:get_status()
-		table.insert(quests.quests, quest)
+		table.insert(quests.quests, instance)
 		return instance
 	end,
 	
@@ -237,8 +237,12 @@ end)
 quests.display = function()
 	--! Displays a menu which allows the user to choose quests and view their
 	--! objectives.
-	local quest_choices = {}
-	local quest_list = {}
+	if #quests.quests == 0 then
+		interface.message("portraits/story/journal.png", _("There are no active quests."))
+		return
+	end
+
+	local options = {}
 	
 	for i, quest in ipairs(quests.quests) do
 		local name = quest.name
@@ -247,22 +251,15 @@ quests.display = function()
 		elseif quest.status == 'failed' then
 			name = markup.concat(name, " (", _("Failed"), ")")
 		end
-		table.insert(quest_choices, name)
-		table.insert(quest_list, quest)
+		table.insert(options, {name, function() quest:display_objectives() end})
 	end
-	if #quest_choices == 0 then
-		interface.message(_("There are no active quests."))
-		return
-	end
-	local choice = helper.get_user_choice(
-		{
-			speaker = 'narrator',
-			caption = _("Quest Log"),
-			image = "portraits/story/journal.png"
-		},
-		quest_choices
-	)
-	quest_list[choice]:display_objectives()
+
+	local menu = interface.menu:init({
+		title = _("Quest Log"),
+		image = "portraits/story/journal.png",
+		options = options
+	})
+	menu:display()
 end
 
 
