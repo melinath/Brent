@@ -56,44 +56,6 @@ wesnoth.wml_actions.alignment_shift = alignment_shift
 -- END CHARACTERISTIC TAGS --
 
 
--- SCENARIO TAGS --
-
---! [wandering_monsters]
--- sets certain sides to have their units move randomly within their maximum
--- movement.
-
-local function wandering_monsters()
-    wesnoth.fire("store_unit", {
-    [1] = { "filter", {side=wesnoth.get_variable("side_number")} },
-    variable = "unit_store",
-        kill = true
-    })
-    for i = 0, wesnoth.get_variable("unit_store.length") - 1 do
-    local u = wesnoth.get_variable("unit_store[" .. i .. "]")
-    wesnoth.fire("store_locations",{
-        {"and",{x=u.x,y=u.y,radius=u.max_moves}},
-        {"not",{x=u.x,y=u.y}},
-        variable="possible_gotos"
-        })
-    local r=math.random(0,wesnoth.get_variable("possible_gotos.length")-1)
-    local target=wesnoth.get_variable("possible_gotos["..r.."]")
-    
-    wesnoth.set_variable("unit_store[" .. i .. "].goto_x",target.x)
-    wesnoth.set_variable("unit_store[" .. i .. "].goto_y",target.y)
-    wesnoth.fire("unstore_unit", {
-        variable = "unit_store[" .. i .. "]",
-        find_vacant = false
-        })
-    end
-    wesnoth.set_variable("unit_store")
-    wesnoth.set_variable("possible_gotos")
-end
-wesnoth.wml_actions.wandering_monsters = wandering_monsters
-
-
--- END SCENARIO TAGS --
-
-
 -- UNIT TAGS --
 
 
