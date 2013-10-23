@@ -11,6 +11,7 @@ modular.require "interactions"
 modular.require "time"
 
 --! General
-quests = modular.require("quests/quests", "Brent")
+quests = modular.require("quests", "Brent")
+modular.require("centers", "Brent")
 modular.require("storyboard", "Brent")
 modular.require("wml_tags", "Brent")

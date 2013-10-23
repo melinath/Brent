@@ -227,7 +227,7 @@ events.register("prestart", function()
 		id="Quest Log",
 		description = _("Quest Log"),
 		{"command", {{"lua", {code=[[
-			local quests = modular.require("quests/quests", "Brent")
+			local quests = modular.require("quests", "Brent")
 			quests.display()
 		]]}}}}
 	})

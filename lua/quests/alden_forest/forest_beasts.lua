@@ -1,8 +1,8 @@
 local interface = modular.require "interface"
 local units = modular.require "units"
 local maps = modular.require "maps"
-local quests = modular.require("quests/quests", "Brent")
-local objectives = modular.require("quests/objectives", "Brent")
+local quests = modular.require("quests", "Brent")
+local objectives = modular.require("objectives", "Brent")
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
