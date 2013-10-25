@@ -196,7 +196,7 @@ quests.quest = utils.class:subclass({
 		for i, objective in ipairs(self.success_objectives) do
 			objective:register_events(self)
 		end
-		for i, objectives in ipairs(self.failure_objectives) do
+		for i, objective in ipairs(self.failure_objectives) do
 			objective:register_events(self)
 		end
 	end,
@@ -204,7 +204,7 @@ quests.quest = utils.class:subclass({
 
 
 --! Quest tag
-scenario.tag:subclass({
+quests.quest_tag = scenario.tag:subclass({
 	name = "quest",
 	persist = true,
 	init = function(cls, cfg)

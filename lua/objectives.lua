@@ -155,7 +155,7 @@ objectives.count = objectives.base:subclass({
 	
 	get_status_text = function(self, quest)
 		if self.total_count == 1 then
-			return quest.objectives.base.get_status_text(self, quest)
+			return objectives.base.get_status_text(self, quest)
 		else
 			local current_count = math.min(self:get_count(quest), self.total_count)
 			return string.format("%d/%d", current_count, self.total_count)

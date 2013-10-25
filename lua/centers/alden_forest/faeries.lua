@@ -3,9 +3,7 @@ local interface = modular.require "interface"
 local centers = modular.require("centers", "Brent")
 
 
-local quest_list = {
-	fetch_water_sprites = modular.require("quests/faeries/fetch_water_sprites", "Brent")
-}
+local fetch_water_sprites = modular.require("quests/faeries/fetch_water_sprites", "Brent")
 
 
 local center = centers.center:init({
@@ -38,16 +36,23 @@ local center = centers.center:init({
 		local c = wesnoth.current.event_context
 		local unit = wesnoth.get_unit(c.x1, c.y1)
 
+		local function unit_message(msg) interface.message(nil, msg, unit.id) end
+		local function leader_message(msg) interface.message(nil, msg, self.ylliana.id) end
+
 		if not self:is_visited() then
 			wesnoth.scroll_to_tile(c.x1, c.y1)
-			interface.message(nil, "This sure is a big tree!", unit.id)
+			unit_message("This sure is a big tree!")
 			self:show_leader()
-			interface.message(nil, "Ah, it's good to find a human who appreciates nature.", self.ylliana.id)
-			interface.message(nil, "Whoa!", unit.id)
-			interface.message(nil, "<i>Ylliana laughs</i>", self.ylliana.id)
+			leader_message("Ah, it's good to find a human who appreciates nature.")
+			unit_message("Whoa!")
+			leader_message("<i>Ylliana laughs.</i>")
 		else
 			self:show_leader()
-			interface.message(nil, "Hello, mortal.", self.ylliana.id)
+			leader_message("Hello, human.")
+		end
+
+		if fetch_water_sprites:is_available() then
+			fetch_water_sprites:intro(unit.id, self.ylliana.id)
 		end
 
 		wesnoth.extract_unit(self.ylliana)
