@@ -51,7 +51,7 @@ local center = centers.center:init({
 
 	on_match = function(self)
 		if fetch_water_sprites.status == "active" then
-			faeries_reward:intro(self.lyra, self.lellanila)
+			fetch_water_sprites:outro(self.lyra, self.lellanila)
 		else
 			local leader = self:get_leader()
 			interface.message(nil, "You have no business here. Please leave.", leader.id)
