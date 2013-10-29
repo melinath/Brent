@@ -13,7 +13,7 @@ local _ = wesnoth.textdomain("wesnoth-Brent")
 local quests = {}
 
 
--- List of quest instances.
+-- List of sticky quest instances.
 quests.quests = {}
 
 
@@ -56,14 +56,23 @@ quests.quest = utils.class:subclass({
 	--! ``completed``, or ``failed``.
 	status = nil,
 
+	path = nil,
+
 
 	--! Methods !--
 	
 	init = function(cls, cfg)
 		local instance = utils.class.init(cls, cfg)
 		instance.status = instance:get_status()
-		table.insert(quests.quests, instance)
+		if instance.path == nil then error("quest instance requires path.") end
+		if instance.name == nil then error("quest instance requires name.") end
+		if instance.id == nil then error("quest instance requires id.") end
 		return instance
+	end,
+
+	start = function(self)
+		--! For starting a quest mid-scenario. Allows for persistence.
+		quests.quest_tag:init({wml={path=self.path}})
 	end,
 	
 	get_var_name = function(self, key, namespace)
@@ -216,6 +225,7 @@ quests.quest_tag = scenario.tag:subclass({
 		local path = "quests/" .. instance.wml.path
 		local quest = modular.require(path, "Brent")
 		quest:register_events()
+		table.insert(quests.quests, quest)
 		return instance
 	end
 })

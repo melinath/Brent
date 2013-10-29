@@ -52,6 +52,7 @@ local return_to_marensdell = objectives.visit_location:init({
 
 local quest = quests.quest:init({
 	id = "forest_beasts",
+	path = "alden_forest/forest_beasts",
 	name = _("Forest Beasts"),
 	description = _("You're to hunt for food in Alden Forest, then return with the slain beasts to the village of Marensdell."),
 

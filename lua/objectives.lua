@@ -126,6 +126,21 @@ objectives.note = objectives.base:subclass({
 })
 
 
+--! Base class for objectives intended to be manually marked complete.
+objectives.manual = objectives.base:subclass({
+	variable_name = 'manual',
+
+	conditions_met = function(self, quest)
+		return quest:get_var(self.variable_name)
+	end,
+
+	mark_complete = function(self, quest)
+		quest:set_var(self.variable_name, 1)
+		self:on_completion(quest)
+	end,
+})
+
+
 --! Base class for objectives which involve getting a certain count of things.
 objectives.count = objectives.base:subclass({
 	--! The total count which must be reached to satisfy the objective.

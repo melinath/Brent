@@ -3,7 +3,7 @@ local interface = modular.require "interface"
 local centers = modular.require("centers", "Brent")
 
 
-local fetch_water_sprites = modular.require("quests/faeries/fetch_water_sprites", "Brent")
+local fetch_water_sprites = modular.require("quests/faeries/01_fetch_water_sprites", "Brent")
 
 
 local center = centers.center:init({

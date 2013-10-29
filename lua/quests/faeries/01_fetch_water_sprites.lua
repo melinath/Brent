@@ -5,15 +5,34 @@ local quests = modular.require("quests", "Brent")
 local _ = wesnoth.textdomain("wesnoth-Brent")
 
 
-local find_water_sprites = objectives.visit_location:init({
+local find_water_sprites = objectives.manual:init({
 	description = _("Find the Water Sprites by the North River"),
-	map_filters = {
-		Waterford = {
-			side = 1,
-			x = "12-14,13",
-			y = "11-12,13"
+	get_map_events = function(self, quest)
+		return {
+			Waterford = {
+				{"moveto", function()
+					local visited_town = quest:get_var("visited_town")
+					if not visited_town then
+						local c = wesnoth.current.event_context
+						local unit = wesnoth.get_unit(c.x1, c.y1)
+						if wesnoth.match_unit(unit, {side=1, x="26-31", y="19-22"}) then
+							interface.message(nil, "This is a human town... we won't find the water sprites here...", unit.id)
+						end
+					end
+				end},
+				{"sighted", function()
+					local c = wesnoth.current.event_context
+					-- primary is the unit being seen.
+					-- secondary is the unit doing the seeing.
+					local unit = wesnoth.get_unit(c.x1, c.y1)
+					local second = wesnoth.get_unit(c.x2, c.y2)
+					if wesnoth.match_unit(unit, {side=2}) and wesnoth.match_unit(second, {side=1}) then
+						interface.message(nil, "Over there!", second.id)
+					end
+				end}
+			}
 		}
-	}
+	end,
 })
 
 local pia_dies = objectives.kill_count:init({
@@ -26,9 +45,10 @@ local pia_dies = objectives.kill_count:init({
 
 
 local quest = quests.quest:init({
-	id = "water_sprites",
+	id = "fetch_water_sprites",
+	path = "faeries/01_fetch_water_sprites",
 	name = _("Fetch the Water Sprites"),
-	image = "portraits/dryad.png",
+	portrait = "portraits/dryad.png",
 	description = _("The battle between the forest sprites and the creatures of flame is going poorly. Escort Pia to the Northern River, by Waterford, and find the water sprites so that she can deliver her message and enlist their aid."),
 
 	success_objectives = {
@@ -144,7 +164,7 @@ local quest = quests.quest:init({
 
 					interface.message(nil, "All right! Let's get going!", speaker1)
 
-					quests.quest_tag:init({wml={path='faeries/fetch_water_sprites'}})
+					self:start()
 				end},
 				{"No thanks.", function()
 					self:set_var("response", "reject")
