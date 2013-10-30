@@ -57,7 +57,7 @@ local return_to_ylliana = objectives.manual:init({
                         x = "21,22,23",
                         y="14-15,13-15,14-15",
                     })
-                    if #unit_list > 0 then
+                    if #unit_list > 0 and not quest:is_waiting() then
                         local center = modular.require("centers/alden_forest/faeries", "Brent")
                         quest:outro(center)
                     end
@@ -88,18 +88,18 @@ local quest = quests.quest:init({
     end,
 
     get_time_left = function(self)
-        return (self:get_var("start_time") + 8 * 24) - time.get()
+        -- Wait five days before letting this go through.
+        return (self:get_var("start_time") + 5 * 24) - time.get()
     end,
     is_waiting = function(self)
-        -- Wait four days before letting this go through.
-        return self:get_time_left() <= 0
+        return self:get_time_left() > 0
     end,
     waiting = function(self)
         interface.message("You are stopped at the base of the tree by a guard.")
         local time_left = self:get_time_left()
         local time_msg
         if time_left > 2 * 24 then
-            time_msg = "in " .. time_left % 24 .. " days"
+            time_msg = "in " .. math.floor(time_left / 24) .. " days"
         elseif time_left > 24 then
             time_msg = "tomorrow"
         else
