@@ -69,16 +69,22 @@ quests.quest = utils.class:subclass({
 	
 	init = function(cls, cfg)
 		local instance = utils.class.init(cls, cfg)
-		instance.status = instance:get_status()
 		if instance.path == nil then error("quest instance requires path.") end
 		if instance.name == nil then error("quest instance requires name.") end
 		if instance.id == nil then error("quest instance requires id.") end
+		instance:set_status()
 		return instance
 	end,
 
 	start = function(self)
 		--! For starting a quest mid-scenario. Allows for persistence.
 		quests.quest_tag:init({wml={path=self.path}})
+	end,
+
+	is_available = function(self)
+		--! Whether this quest should be considered "startable".
+		--! By default, just whether the quest has been started or not.
+		return self.status == "inactive"
 	end,
 	
 	get_var_name = function(self, key, namespace)
@@ -182,7 +188,7 @@ quests.quest = utils.class:subclass({
 	end,
 
 	objective_completed = function(self, objective)
-		self.status = self:get_status()
+		self:set_status()
 		if self.status == 'completed' then
 			self:on_success()
 		elseif self.status == 'failed' then
@@ -190,28 +196,33 @@ quests.quest = utils.class:subclass({
 		end
 	end,
 
-	get_status = function(self)
-		--! Returns the status of the quest. This will either be ``completed``,
-		--! ``failed``, or ``active``. A quest is considered ``completed`` if
-		--! all of its success objectives have been completed, ``failed`` if any
-		--! of its failure objectives have been completed, and ``active``
-		--! otherwise.
-		local status = 'completed'
-		for i, objective in ipairs(self.success_objectives) do
-			if not objective:conditions_met(self) then
-				status = 'active'
-				break
-			end
-		end
+	set_status = function(self)
+		--! Gets and stores the status of the quest. This will either be
+		--! ``completed``, ``failed``, ``active``, or ``inactive``. A
+		--! quest is considered ``completed`` if all of its success
+		--! objectives have been completed, ``failed`` if any of its
+		--! failure objectives have been completed, ``active`` if it is
+		--! currently being worked on, and ``inactive`` otherwise.
+		local status = self:get_var("status")
 		if status == 'active' then
-			for i, objective in ipairs(self.failure_objectives) do
-				if objective:conditions_met(self) then
-					status = 'failed'
+			status = 'completed'
+			for i, objective in ipairs(self.success_objectives) do
+				if not objective:conditions_met(self) then
+					status = 'active'
 					break
 				end
 			end
+			if status == 'active' then
+				for i, objective in ipairs(self.failure_objectives) do
+					if objective:conditions_met(self) then
+						status = 'failed'
+						break
+					end
+				end
+			end
 		end
-		return status
+		self.status = status or "inactive"
+		self:set_var("status", self.status)
 	end,
 
 	register_events = function(self)
@@ -240,6 +251,10 @@ quests.quest_tag = scenario.tag:subclass({
 		--! "~add-ons/Brent/lua/quests/faeries/0.lua".
 		local path = "quests/" .. instance.wml.path
 		local quest = modular.require(path, "Brent")
+
+		quest:set_var("status", "active")
+		quest:set_status()
+
 		quest:register_events()
 		table.insert(quests.quests, quest)
 		return instance
@@ -263,21 +278,20 @@ end)
 quests.display = function()
 	--! Displays a menu which allows the user to choose quests and view their
 	--! objectives.
-	if #quests.quests == 0 then
-		interface.message("portraits/story/journal.png", _("There are no active quests."))
-		return
-	end
 
 	local options = {}
 	
 	for i, quest in ipairs(quests.quests) do
-		local name = quest.name
-		if quest.status == 'completed' then
-			name = markup.concat(name, " (", _("Complete"), ")")
-		elseif quest.status == 'failed' then
-			name = markup.concat(name, " (", _("Failed"), ")")
+		if quest.status == 'active' then
+			table.insert(options, {
+				quest.name,
+				function() quest:display_objectives() end
+			})
 		end
-		table.insert(options, {name, function() quest:display_objectives() end})
+	end
+	if #options == 0 then
+		interface.message("portraits/story/journal.png", _("There are no active quests."))
+		return
 	end
 
 	local menu = interface.menu:init({

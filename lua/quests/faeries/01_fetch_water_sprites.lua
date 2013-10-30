@@ -69,10 +69,6 @@ local quest = quests.quest:init({
 		role = "helper",
 	}),
 
-	is_available = function(self)
-		return self:get_var("response") ~= "accept"
-	end,
-
 	intro = function(self, speaker1, speaker2)
 		-- speaker1 is the (id of the) unit taking the quest.
 		-- speaker2 is the (id of the) speaker giving the quest.

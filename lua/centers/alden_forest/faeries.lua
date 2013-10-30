@@ -53,10 +53,10 @@ local center = centers.center:init({
 		else
 			self:show_leader()
 			interface.message(self.ylliana, "Hello, human.")
+		end
 
-			if fetch_water_sprites:is_available() then
-				fetch_water_sprites:intro(unit.id, self.ylliana.id)
-			end
+		if fetch_water_sprites:is_available() then
+			fetch_water_sprites:intro(unit.id, self.ylliana.id)
 		end
 
 		wesnoth.extract_unit(self.ylliana)
