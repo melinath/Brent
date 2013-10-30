@@ -52,6 +52,12 @@ quests.quest = utils.class:subclass({
 	--! information.
 	notes = {},
 
+	--! A table of rewards for completing this quest.
+	rewards = {
+		experience = nil,
+		gold = nil
+	},
+
 	--! A cached value of the quest's status. This will either be ``active``,
 	--! ``completed``, or ``failed``.
 	status = nil,
@@ -145,13 +151,23 @@ quests.quest = utils.class:subclass({
 	
 	on_success = function(self)
 		--! Hook to run code (such as rewards) when a quest is successfully
-		--! completed. By default, fires off a print.
+		--! completed. By default, fires off a print and checks the "rewards"
+		--! table for any simple rewards.
 		wesnoth.fire("print", {
 			text = markup.concat(_("Quest completed: "), self.name),
 			green = 255,
 			size = 20,
 			duration = 200
 		})
+		if self.rewards.experience ~= nil then
+			local hero_id = wesnoth.get_variable("main.id")
+			local unit = wesnoth.get_units({id=hero_id})[1]
+			unit.experience = unit.experience + self.rewards.experience
+		end
+		if self.rewards.gold ~= nil then
+			local hero_side = wesnoth.sides[1]
+			hero_side.gold = hero_side.gold + self.rewards.gold
+		end
 	end,
 	
 	on_failure = function(self)

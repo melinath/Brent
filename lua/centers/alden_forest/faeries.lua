@@ -4,6 +4,7 @@ local centers = modular.require("centers", "Brent")
 
 
 local fetch_water_sprites = modular.require("quests/faeries/01_fetch_water_sprites", "Brent")
+local faeries_reward = modular.require("quests/faeries/02_faeries_reward", "Brent")
 
 
 local center = centers.center:init({
@@ -46,13 +47,19 @@ local center = centers.center:init({
 			leader_message("Ah, it's good to find a human who appreciates nature.")
 			unit_message("Whoa!")
 			leader_message("<i>Ylliana laughs.</i>")
+		elseif faeries_reward.status == 'active' then
+			if faeries_reward:is_waiting() then
+				faeries_reward:waiting()
+			else
+				faeries_reward:outro(self)
+			end
 		else
 			self:show_leader()
 			leader_message("Hello, human.")
-		end
 
-		if fetch_water_sprites:is_available() then
-			fetch_water_sprites:intro(unit.id, self.ylliana.id)
+			if fetch_water_sprites:is_available() then
+				fetch_water_sprites:intro(unit.id, self.ylliana.id)
+			end
 		end
 
 		wesnoth.extract_unit(self.ylliana)
