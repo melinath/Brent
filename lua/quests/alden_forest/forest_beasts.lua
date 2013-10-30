@@ -22,9 +22,7 @@ local kill_forest_beasts = objectives.kill_count:init({
 				end,
 				on_match = function(self)
 					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
-					interface.message(nil,
-						  			  "Hmm...I can't go back yet. I have to catch more game.",
-									  unit.id)
+					interface.message(unit, "Hmm...I can't go back yet. I have to catch more game.")
 				end,
 			})
 			maps.exit_handler:init({
@@ -32,9 +30,7 @@ local kill_forest_beasts = objectives.kill_count:init({
 				type = "cancel",
 				on_match = function(self)
 					local unit = wesnoth.get_units({side=1, canrecruit=true})[1]
-					interface.message(nil,
-									  "I shouldn't go too far into the forest right now. Maybe another day.",
-									  unit.id)
+					interface.message(unit, "I shouldn't go too far into the forest right now. Maybe another day.")
 				end,
 			})
 		end

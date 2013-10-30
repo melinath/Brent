@@ -37,16 +37,13 @@ local center = centers.center:init({
 		local c = wesnoth.current.event_context
 		local unit = wesnoth.get_unit(c.x1, c.y1)
 
-		local function unit_message(msg) interface.message(nil, msg, unit.id) end
-		local function leader_message(msg) interface.message(nil, msg, self.ylliana.id) end
-
 		if not self:is_visited() then
 			wesnoth.scroll_to_tile(c.x1, c.y1)
-			unit_message("This sure is a big tree!")
+			interface.message(unit, "This sure is a big tree!")
 			self:show_leader()
-			leader_message("Ah, it's good to find a human who appreciates nature.")
-			unit_message("Whoa!")
-			leader_message("<i>Ylliana laughs.</i>")
+			interface.message(self.ylliana, "Ah, it's good to find a human who appreciates nature.")
+			interface.message(unit, "Whoa!")
+			interface.message(self.ylliana, "<i>Ylliana laughs.</i>")
 		elseif faeries_reward.status == 'active' then
 			if faeries_reward:is_waiting() then
 				faeries_reward:waiting()
@@ -55,7 +52,7 @@ local center = centers.center:init({
 			end
 		else
 			self:show_leader()
-			leader_message("Hello, human.")
+			interface.message(self.ylliana, "Hello, human.")
 
 			if fetch_water_sprites:is_available() then
 				fetch_water_sprites:intro(unit.id, self.ylliana.id)

@@ -54,7 +54,7 @@ local center = centers.center:init({
 			fetch_water_sprites:outro(self.lyra, self.lellanila)
 		else
 			local leader = self:get_leader()
-			interface.message(nil, "You have no business here. Please leave.", leader.id)
+			interface.message(leader, "You have no business here. Please leave.")
 		end
 	end,
 })

@@ -106,8 +106,7 @@ local quest = quests.quest:init({
             time_msg = "later today"
         end
 
-        -- Should also set caption to "Elvish Guard" - can't right now.
-        interface.message("portraits/elves/transparent/fighter.png", "They do not wish to be disturbed right now. They'll probably be done " .. time_msg .. ".")
+        interface.message("portraits/elves/transparent/fighter.png", "Elvish Guard", "They do not wish to be disturbed right now. They'll probably be done " .. time_msg .. ".")
         interface.message("In the distance, you can hear snips of conversation...")
     end,
 
@@ -117,14 +116,14 @@ local quest = quests.quest:init({
         local hero_id = wesnoth.get_variable("main.id")
         local hero = wesnoth.get_units({id=hero_id})[1]
         local pronouns = units.get_pronouns(hero)
-        interface.message(nil, "Ah, you've come for your reward, I see.", ylliana.id)
-        interface.message(nil, "<i>Ylliana lays her hands on " .. hero.name .. "'s head. " ..
-                               strings.capfirst(pronouns.nom) .. " shivers as a slight chill runs " ..
-                               "through " .. pronouns.acc .. ".</i>", ylliana.id)
+        interface.message(ylliana, "Ah, you've come for your reward, I see.")
+        interface.message(ylliana, "<i>Ylliana lays her hands on " .. hero.name .. "'s head. " ..
+                                   strings.capfirst(pronouns.nom) .. " shivers as a slight chill runs " ..
+                                   "through " .. pronouns.acc .. ".</i>")
         return_to_ylliana:mark_complete(self)
 
-        interface.message(nil, "If you wish to continue aiding us, go south to the battlefield. The " ..
-                               "commander there can tell you what to do.", ylliana.id)
+        interface.message(ylliana, "If you wish to continue aiding us, go south to the battlefield. The " ..
+                                   "commander there can tell you what to do.")
     end,
 })
 
